@@ -17,7 +17,7 @@ class ProductService:
     def create_product(product: CreateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
 
         try:
-            db_product = Product(**product.model_dump())
+            db_product = Product(**product.model_dump(), user_id=current_user.id)
             session.add(db_product)
             session.commit()
             session.refresh(db_product)
@@ -36,7 +36,7 @@ class ProductService:
     def get_products(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str|int]]:
 
         try:
-            products = session.exec(select(Product)).all()
+            products = session.exec(select(Product).where(Product.user_id == current_user.id)).all()
             if not products:
                 raise ItemNotFoundException(type='Product')
             return products
@@ -60,7 +60,7 @@ class ProductService:
     ) -> list[dict[str, str|int]]:
         
         try:
-            query = select(Product)
+            query = select(Product).where(Product.user_id == current_user.id)
 
             if price_min is not None:
                 query = query.where(Product.price >= price_min)
@@ -86,7 +86,12 @@ class ProductService:
     
     @staticmethod
     def get_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
-        product = session.get(Product, product_id)
+        
+        statement = select(Product).where(
+            Product.id == product_id, Product.user_id == current_user.id
+        )
+        product = session.exec(statement).first()
+
         if not product:
             raise ItemNotFoundException(type='Product', item_id=product_id)
         return product
@@ -95,7 +100,12 @@ class ProductService:
     @staticmethod
     def update_product(product_id: UUID, product_update: UpdateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
         try:
-            product = session.get(Product, product_id)
+
+            statement = select(Product).where(
+            Product.id == product_id, Product.user_id == current_user.id
+            )
+            product = session.exec(statement).first()
+            
             if not product:
                 raise ItemNotFoundException(type='Product',item_id=product_id)
             product_data = product_update.model_dump(exclude_unset=True)
@@ -120,7 +130,12 @@ class ProductService:
 
     @staticmethod
     def delete_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> None:
-        product = session.get(Product, product_id)
+        
+        statement = select(Product).where(
+            Product.id == product_id, Product.user_id == current_user.id
+        )
+        product = session.exec(statement).first()
+        
         if not product:
             raise ItemNotFoundException(type='Product',item_id=product_id)
         session.delete(product)

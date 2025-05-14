@@ -17,7 +17,7 @@ class CategoryService:
     @staticmethod
     def create_category(category: CreateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
         try:
-            db_category = Category(**category.model_dump())
+            db_category = Category(**category.model_dump(),user_id=current_user.id)
             session.add(db_category)
             session.commit()
             session.refresh(db_category)
@@ -35,7 +35,7 @@ class CategoryService:
     @staticmethod
     def get_categories(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str | int | None]]:
         try:
-            categories = session.exec(select(Category)).all()
+            categories = session.exec(select(Category).where(Category.user_id == current_user.id)).all()
             if not categories:
                 raise ItemNotFoundException(type='Category')
             return categories
@@ -56,7 +56,7 @@ class CategoryService:
     parent_id: UUID | None = None, 
     ) -> list[dict[str, str | int | None]]:
         try:
-            query = select(Category)
+            query = select(Category).where(Category.user_id == current_user.id)
 
             if parent_id is not None:
                 query = query.where(Category.parent_id == parent_id)
@@ -82,7 +82,7 @@ class CategoryService:
         result = {
             'id':category.id,
             'name':category.name,
-            'patent_id':category.parent_id,
+            'parent_id':category.parent_id,
             'subcategories' : [
                 CategoryService.get_nested_categories(sub) for sub in category.subcategories
             ]
@@ -107,7 +107,12 @@ class CategoryService:
 
     @staticmethod
     def read_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str | int | None]:
-        category = session.get(Category, category_id)
+        
+        statement = select(Category).where(
+            Category.id == category_id, Category.user_id == current_user.id
+        )
+        category = session.exec(statement).first()
+
         if not category:
             raise ItemNotFoundException(type='Category', item_id=category_id)
         return category
@@ -116,7 +121,12 @@ class CategoryService:
     @staticmethod
     def update_category(category_id: UUID, category_update: UpdateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
         try:
-            category = session.get(Category, category_id)
+
+            statement = select(Category).where(
+            Category.id == category_id, Category.user_id == current_user.id
+            )
+            category = session.exec(statement).first()
+
             if not category:
                 raise ItemNotFoundException(type='Category', item_id=category_id)
             category_data = category_update.model_dump(exclude_unset=True)
@@ -141,7 +151,12 @@ class CategoryService:
 
     @staticmethod
     def delete_category(category_id: UUID, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> None:
-        category = session.get(Category, category_id)
+        
+        statement = select(Category).where(
+            Category.id == category_id, Category.user_id == current_user.id
+        )
+        category = session.exec(statement).first()
+
         if not category:
             raise ItemNotFoundException(type='Category',item_id=category_id)
         session.delete(category)
