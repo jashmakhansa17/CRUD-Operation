@@ -12,3 +12,16 @@ DETAIL:  Key (id)=(a46965b8-b28a-4eb8-a595-65eec7db8de0) already exists.
 2025-05-13 18:03 - WARNING - duplicate key value violates unique constraint "category_pkey"
 DETAIL:  Key (id)=(a46965b8-b28a-4eb8-a595-65eec7db8de0) already exists.
 
+2025-05-14 18:45 - WARNING - (psycopg2.errors.UndefinedColumn) column "user_id" of relation "category" does not exist
+LINE 1: INSERT INTO category (id, name, user_id, parent_id) VALUES (...
+                                        ^
+
+[SQL: INSERT INTO category (id, name, user_id, parent_id) VALUES (%(id)s::UUID, %(name)s, %(user_id)s::UUID, %(parent_id)s::UUID)]
+[parameters: {'id': UUID('db32050a-5554-4c18-a02a-27dd98e62c14'), 'name': 'first', 'user_id': UUID('0050382e-06ef-4427-a0c9-f2f83abf39e2'), 'parent_id': None}]
+(Background on this error at: https://sqlalche.me/e/20/f405) in app.services.category_service
+2025-05-14 19:30 - WARNING - duplicate key value violates unique constraint "uq_product_name_category"
+DETAIL:  Key (name, category_id)=(first, 2ead3396-7629-43c6-877c-dc8a4af85028) already exists.
+
+2025-05-14 19:31 - WARNING - duplicate key value violates unique constraint "uq_product_name_category"
+DETAIL:  Key (name, category_id)=(first, 2ead3396-7629-43c6-877c-dc8a4af85028) already exists.
+
