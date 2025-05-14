@@ -14,4 +14,5 @@ class Product(SQLModel, table=True):
     description: str
     price: float = Field(gt=0)
 
+    user_id: UUID | None = Field(foreign_key='people.id', ondelete='CASCADE')
     category_id: UUID | None = Field(foreign_key='category.id', ondelete='CASCADE')
