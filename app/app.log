@@ -1,0 +1,14 @@
+2025-05-13 17:56 - WARNING - Mapper 'Mapper[Product(product)]' has no property 'category'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called. in app.services.product_service
+2025-05-13 17:57 - WARNING - One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[Category(category)]'. Original exception was: Mapper 'Mapper[Product(product)]' has no property 'category'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called. in app.services.product_service
+2025-05-13 17:59 - WARNING - Product not found
+2025-05-13 18:00 - WARNING - Category not found
+2025-05-13 18:01 - WARNING - Category not found
+2025-05-13 18:02 - WARNING - duplicate key value violates unique constraint "category_pkey"
+DETAIL:  Key (id)=(a46965b8-b28a-4eb8-a595-65eec7db8de0) already exists.
+
+2025-05-13 18:02 - WARNING - duplicate key value violates unique constraint "category_pkey"
+DETAIL:  Key (id)=(a46965b8-b28a-4eb8-a595-65eec7db8de0) already exists.
+
+2025-05-13 18:03 - WARNING - duplicate key value violates unique constraint "category_pkey"
+DETAIL:  Key (id)=(a46965b8-b28a-4eb8-a595-65eec7db8de0) already exists.
+
