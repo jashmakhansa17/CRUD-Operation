@@ -1,9 +1,12 @@
-from fastapi import status, Response
+from fastapi import status, Response, Depends
 from ..core.dependencies import SessionDep
 from ..models.category_model import Category
 from ..schemas.category_schema import CreateCategory, UpdateCategory, NestedCategoryResponse
 from sqlmodel import select
 from uuid import UUID
+from typing import Annotated
+from ..models.user_model import User
+from ..core.dependencies import admin_access, get_current_user
 
 from sqlalchemy.exc import IntegrityError
 from ..core.exceptions import ItemInvalidDataException, InternalServerException, ItemNotFoundException
@@ -12,7 +15,7 @@ from ..core.exceptions import ItemInvalidDataException, InternalServerException,
 class CategoryService:
 
     @staticmethod
-    def create_category(category: CreateCategory, session: SessionDep) -> dict[str, str | int | None]:
+    def create_category(category: CreateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
         try:
             db_category = Category(**category.model_dump())
             session.add(db_category)
@@ -30,7 +33,7 @@ class CategoryService:
         
 
     @staticmethod
-    def get_categories(session: SessionDep) -> list[dict[str, str | int | None]]:
+    def get_categories(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str | int | None]]:
         try:
             categories = session.exec(select(Category)).all()
             if not categories:
@@ -47,6 +50,7 @@ class CategoryService:
     @staticmethod
     def get_pagination_categories(
     session: SessionDep,
+    current_user: Annotated[User,Depends(get_current_user)],
     page: int = 1, 
     size: int = 10,
     parent_id: UUID | None = None, 
@@ -87,7 +91,7 @@ class CategoryService:
     
 
     @staticmethod
-    def nested_category(category_id: UUID, session: SessionDep) -> NestedCategoryResponse:
+    def nested_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> NestedCategoryResponse:
         try:
             category = session.get(Category,category_id)
             if not category:
@@ -102,7 +106,7 @@ class CategoryService:
         
 
     @staticmethod
-    def read_category(category_id: UUID, session: SessionDep) -> dict[str, str | int | None]:
+    def read_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str | int | None]:
         category = session.get(Category, category_id)
         if not category:
             raise ItemNotFoundException(type='Category', item_id=category_id)
@@ -110,7 +114,7 @@ class CategoryService:
     
 
     @staticmethod
-    def update_category(category_id: UUID, category_update: UpdateCategory, session: SessionDep) -> dict[str, str | int | None]:
+    def update_category(category_id: UUID, category_update: UpdateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
         try:
             category = session.get(Category, category_id)
             if not category:
@@ -136,7 +140,7 @@ class CategoryService:
         
 
     @staticmethod
-    def delete_category(category_id: UUID, session: SessionDep) -> None:
+    def delete_category(category_id: UUID, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> None:
         category = session.get(Category, category_id)
         if not category:
             raise ItemNotFoundException(type='Category',item_id=category_id)

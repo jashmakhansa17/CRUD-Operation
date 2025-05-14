@@ -1,10 +1,12 @@
-from fastapi import status, Response
+from fastapi import status, Response, Depends
 from ..core.dependencies import SessionDep
 from ..models.product_model import Product
 from ..schemas.product_schema import CreateProduct, UpdateProduct
 from sqlmodel import select
 from uuid import UUID
-
+from typing import Annotated
+from ..core.dependencies import get_current_user
+from ..models.user_model import User
 from sqlalchemy.exc import IntegrityError
 from ..core.exceptions import ItemInvalidDataException, InternalServerException, ItemNotFoundException
 
@@ -12,7 +14,7 @@ from ..core.exceptions import ItemInvalidDataException, InternalServerException,
 class ProductService:
 
     @staticmethod
-    def create_product(product: CreateProduct, session: SessionDep) -> dict[str, str|int]:
+    def create_product(product: CreateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
 
         try:
             db_product = Product(**product.model_dump())
@@ -31,7 +33,7 @@ class ProductService:
         
 
     @staticmethod
-    def get_products(session: SessionDep) -> list[dict[str, str|int]]:
+    def get_products(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str|int]]:
 
         try:
             products = session.exec(select(Product)).all()
@@ -49,6 +51,7 @@ class ProductService:
     @staticmethod
     def get_pagination_products(
     session: SessionDep,
+    current_user: Annotated[User,Depends(get_current_user)],
     page: int = 1, 
     size: int = 10,
     category_id: UUID | None = None, 
@@ -82,7 +85,7 @@ class ProductService:
         
     
     @staticmethod
-    def get_product(product_id: UUID, session: SessionDep) -> dict[str, str|int]:
+    def get_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
         product = session.get(Product, product_id)
         if not product:
             raise ItemNotFoundException(type='Product', item_id=product_id)
@@ -90,7 +93,7 @@ class ProductService:
     
 
     @staticmethod
-    def update_product(product_id: UUID, product_update: UpdateProduct, session: SessionDep) -> dict[str, str|int]:
+    def update_product(product_id: UUID, product_update: UpdateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
         try:
             product = session.get(Product, product_id)
             if not product:
@@ -116,7 +119,7 @@ class ProductService:
         
 
     @staticmethod
-    def delete_product(product_id: UUID, session: SessionDep) -> None:
+    def delete_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> None:
         product = session.get(Product, product_id)
         if not product:
             raise ItemNotFoundException(type='Product',item_id=product_id)

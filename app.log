@@ -1,0 +1,20 @@
+2025-05-14 16:23 - WARNING - insert or update on table "category" violates foreign key constraint "category_parent_id_fkey"
+DETAIL:  Key (parent_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 16:23 - WARNING - insert or update on table "category" violates foreign key constraint "category_parent_id_fkey"
+DETAIL:  Key (parent_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 16:24 - WARNING - Product not found
+2025-05-14 16:24 - WARNING - insert or update on table "product" violates foreign key constraint "product_category_id_fkey"
+DETAIL:  Key (category_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 16:25 - WARNING - insert or update on table "category" violates foreign key constraint "category_parent_id_fkey"
+DETAIL:  Key (parent_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 16:38 - WARNING - insert or update on table "product" violates foreign key constraint "product_category_id_fkey"
+DETAIL:  Key (category_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 16:41 - WARNING - insert or update on table "product" violates foreign key constraint "product_category_id_fkey"
+DETAIL:  Key (category_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-14 17:12 - WARNING - 'User' object has no attribute 'uuid' in app.services.product_service
