@@ -14,6 +14,7 @@ class ReadCategory(BaseModel):
     id: UUID
     name: str
     parent_id: UUID | None
+    user_id: UUID
 
     class Config:
         orm_mode = True
@@ -28,6 +29,7 @@ class NestedCategoryResponse(BaseModel):
     id: UUID
     name: str
     patent_id: UUID | None
+    user_id: UUID
     subcategories: list["NestedCategoryResponse"] = []
 
     class Config:

@@ -17,6 +17,7 @@ class ReadProduct(BaseModel):
     description: str
     price: float
     category_id: UUID
+    user_id: UUID
 
     class Config:
         orm_mode = True

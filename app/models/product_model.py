@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 class Product(SQLModel, table=True):
     __table_args__ = (
-        UniqueConstraint("name", "category_id", name="uq_product_name_category"),
+        UniqueConstraint("name", "category_id", "user_id", name="uq_product_name_category"),
         CheckConstraint("price > 0", name="chk_price_positive"),
     )
 

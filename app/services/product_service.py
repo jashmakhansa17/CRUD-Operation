@@ -18,7 +18,7 @@ class ProductService:
     def __init__(
         self,
         session: SessionDep,
-        current_user: Annotated[User, Depends(get_current_user)],
+        current_user: User,
     ):
         self.session = session
         self.current_user = current_user
@@ -44,6 +44,19 @@ class ProductService:
             products = self.session.exec(
                 select(Product).where(Product.user_id == self.current_user.id)
             ).all()
+            if not products:
+                raise ItemNotFoundException(type="Product")
+            return products
+
+        except ItemNotFoundException:
+            raise
+
+        except Exception as e:
+            raise InternalServerException(e, __name__)
+        
+    def get_all_products(self):
+        try:
+            products = self.session.exec(select(Product)).all()
             if not products:
                 raise ItemNotFoundException(type="Product")
             return products

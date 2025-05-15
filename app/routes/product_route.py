@@ -5,7 +5,7 @@ from uuid import UUID
 from ..schemas.product_schema import CreateProduct, ReadProduct, UpdateProduct
 
 from ..services.product_service import ProductService
-from ..core.dependencies import get_current_user, SessionDep
+from ..core.dependencies import get_current_user, SessionDep, admin_access
 from ..models.user_model import User
 
 
@@ -43,6 +43,19 @@ async def get_products(
     product_service: Annotated[ProductService, Depends(get_product_service)],
 ) -> list[dict[str, str | int]]:
     return product_service.get_products()
+
+
+# get all products for admin
+@router.get(
+    "/all",
+    summary="Get all products for admin",
+    description="Retrieve a list of all products from the database.",
+    response_model=list[ReadProduct],  
+)
+async def get_all_products(
+    product_service: Annotated[ProductService, Depends(admin_access)],
+) -> list[dict[str, str | int]]:
+    return product_service.get_all_products()
 
 
 # Get products after validation

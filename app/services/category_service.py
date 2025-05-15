@@ -1,9 +1,10 @@
-from fastapi import status, Response, Depends
+from fastapi import status, Response, Depends, HTTPException
 from sqlmodel import select
 from uuid import UUID
 from typing import Annotated
 from sqlalchemy.exc import IntegrityError
 from ..models.category_model import Category
+from ..models.user_model import User
 from ..schemas.category_schema import (
     CreateCategory,
     UpdateCategory,
@@ -20,7 +21,7 @@ from ..core.exceptions import (
 
 class CategoryService:
     def __init__(
-        self, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]
+        self, session: SessionDep, current_user: User
     ):
         self.session = session
         self.current_user = current_user
@@ -42,12 +43,55 @@ class CategoryService:
         except Exception as e:
             self.session.rollback()
             raise InternalServerException(e, __name__)
+        
+    def create_category_for_user(self, user_id: UUID, category: CreateCategory):
+        try:
+            statement = select(User).where(
+                User.id == user_id, User.role == 'user'
+            )
+            user = self.session.exec(statement).first()
+
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+
+            db_category = Category(
+                **category.model_dump(), user_id=user_id
+            )
+            self.session.add(db_category)
+            self.session.commit()
+            self.session.refresh(db_category)
+            return db_category
+        
+        except HTTPException:
+            raise
+
+        except IntegrityError as e:
+            self.session.rollback()
+            raise ItemInvalidDataException(e)
+
+        except Exception as e:
+            self.session.rollback()
+            raise InternalServerException(e, __name__)
+
 
     def get_categories(self) -> list[dict[str, str | int | None]]:
         try:
             categories = self.session.exec(
                 select(Category).where(Category.user_id == self.current_user.id)
             ).all()
+            if not categories:
+                raise ItemNotFoundException(type="Category")
+            return categories
+
+        except ItemNotFoundException:
+            raise
+
+        except Exception as e:
+            raise InternalServerException(e, __name__)
+        
+    def get_all_categories(self) -> list[dict[str, str | int | None]]:
+        try:
+            categories = self.session.exec(select(Category)).all()
             if not categories:
                 raise ItemNotFoundException(type="Category")
             return categories

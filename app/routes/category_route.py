@@ -43,17 +43,44 @@ async def create_category(
     return category_service.create_category(category)
 
 
+@router.post(
+    "/user",
+    summary="Create a category for user",
+    description="Creates a new category for user and stores it in the database. Returns the created category.",
+    
+)
+async def create_category_for_user(
+    user_id: UUID, 
+    category: CreateCategory,
+    category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
+):
+    return category_service.create_category_for_user(user_id,category)
+
+
 # Get all categories
 @router.get(
     "/",
     summary="Get all categories",
-    description="Retrieve a list of all categories from the database.",
+    description="Retrieve a list of all categories from the database for specific user.",
     response_model=list[ReadCategory],
 )
 async def get_categories(
     category_service: Annotated[CategoryService, Depends(get_category_service_all)],
 ) -> list[dict[str, str | int | None]]:
     return category_service.get_categories()
+
+
+# Get all categories for admin
+@router.get(
+    "/all",
+    summary="Get all categories for admin",
+    description="Retrieve a list of all categories of all users from the database.",
+    response_model=list[ReadCategory],
+)
+async def get_all_categories(
+    category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
+) -> list[dict[str, str | int | None]]:
+    return category_service.get_all_categories()
 
 
 # Get categories after validation

@@ -27,3 +27,29 @@ DETAIL:  Key (name, category_id)=(first, 2ead3396-7629-43c6-877c-dc8a4af85028) a
 
 2025-05-15 14:58 - WARNING - Product not found
 2025-05-15 14:58 - WARNING - Category not found
+2025-05-15 15:33 - WARNING - Category not found
+2025-05-15 16:21 - WARNING - Category not found
+2025-05-15 16:24 - WARNING - duplicate key value violates unique constraint "ix_category_name"
+DETAIL:  Key (name)=(admin main 2) already exists.
+
+2025-05-15 16:26 - WARNING - duplicate key value violates unique constraint "ix_category_name"
+DETAIL:  Key (name)=(admin main 3) already exists.
+
+2025-05-15 16:31 - WARNING - Category with ID 0ab9a46b-6564-4513-bf5d-14658768ef9e not found
+2025-05-15 16:33 - WARNING - Category with ID 0ab9a46b-6564-4513-bf5d-14658768ef9e not found
+2025-05-15 16:33 - WARNING - Category with ID d82f9f53-48e4-483d-a287-6f4bddfbc664 not found
+2025-05-15 16:33 - WARNING - insert or update on table "category" violates foreign key constraint "category_parent_id_fkey"
+DETAIL:  Key (parent_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
+2025-05-15 16:34 - WARNING - Category with ID 0ab9a46b-6564-4513-bf5d-14658768ef9e not found
+2025-05-15 16:37 - WARNING - Category not found
+2025-05-15 16:38 - WARNING - Product not found
+2025-05-15 16:47 - WARNING - Category not found
+2025-05-15 16:57 - WARNING - Boolean value of this clause is not defined in app.services.category_service
+2025-05-15 16:58 - WARNING - 'SelectOfScalar' object has no attribute 'first' in app.services.category_service
+2025-05-15 16:58 - WARNING - 'SelectOfScalar' object has no attribute 'first' in app.services.category_service
+2025-05-15 17:12 - WARNING - 404: User not found in app.services.category_service
+2025-05-15 17:16 - WARNING - Product not found
+2025-05-15 17:21 - WARNING - insert or update on table "category" violates foreign key constraint "category_parent_id_fkey"
+DETAIL:  Key (parent_id)=(3fa85f64-5717-4562-b3fc-2c963f66afa6) is not present in table "category".
+
