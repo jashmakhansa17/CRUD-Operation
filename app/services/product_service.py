@@ -13,30 +13,32 @@ from ..core.exceptions import ItemInvalidDataException, InternalServerException,
 
 class ProductService:
 
-    @staticmethod
-    def create_product(product: CreateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
+    def __init__(self, session: SessionDep, current_user: Annotated[User, Depends(get_current_user)]):
+        self.session = session
+        self.current_user = current_user
+
+    def create_product(self, product: CreateProduct) -> dict[str, str|int]:
 
         try:
-            db_product = Product(**product.model_dump(), user_id=current_user.id)
-            session.add(db_product)
-            session.commit()
-            session.refresh(db_product)
+            db_product = Product(**product.model_dump(), user_id=self.current_user.id)
+            self.session.add(db_product)
+            self.session.commit()
+            self.session.refresh(db_product)
             return db_product
         
         except IntegrityError as e:
-            session.rollback()
+            self.session.rollback()
             raise ItemInvalidDataException(e)
 
         except Exception as e:
-            session.rollback()
+            self.session.rollback()
             raise InternalServerException(e, __name__)
         
 
-    @staticmethod
-    def get_products(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str|int]]:
+    def get_products(self) -> list[dict[str, str|int]]:
 
         try:
-            products = session.exec(select(Product).where(Product.user_id == current_user.id)).all()
+            products = self.session.exec(select(Product).where(Product.user_id == self.current_user.id)).all()
             if not products:
                 raise ItemNotFoundException(type='Product')
             return products
@@ -48,10 +50,8 @@ class ProductService:
             raise InternalServerException(e, __name__)
     
 
-    @staticmethod
     def get_pagination_products(
-    session: SessionDep,
-    current_user: Annotated[User,Depends(get_current_user)],
+    self,
     page: int = 1, 
     size: int = 10,
     category_id: UUID | None = None, 
@@ -60,7 +60,7 @@ class ProductService:
     ) -> list[dict[str, str|int]]:
         
         try:
-            query = select(Product).where(Product.user_id == current_user.id)
+            query = select(Product).where(Product.user_id == self.current_user.id)
 
             if price_min is not None:
                 query = query.where(Product.price >= price_min)
@@ -72,7 +72,7 @@ class ProductService:
             skip = (page - 1) * size
             query = query.offset(skip).limit(size)
 
-            products = session.exec(query).all()
+            products = self.session.exec(query).all()
             if not products:
                 raise ItemNotFoundException(type='Product')
             return products
@@ -84,60 +84,57 @@ class ProductService:
             raise InternalServerException(e, __name__)
         
     
-    @staticmethod
-    def get_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
+    def get_product(self, product_id: UUID) -> dict[str, str|int]:
         
         statement = select(Product).where(
-            Product.id == product_id, Product.user_id == current_user.id
+            Product.id == product_id, Product.user_id == self.current_user.id
         )
-        product = session.exec(statement).first()
+        product = self.session.exec(statement).first()
 
         if not product:
             raise ItemNotFoundException(type='Product', item_id=product_id)
         return product
     
 
-    @staticmethod
-    def update_product(product_id: UUID, product_update: UpdateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
+    def update_product(self, product_id: UUID, product_update: UpdateProduct) -> dict[str, str|int]:
         try:
 
             statement = select(Product).where(
-            Product.id == product_id, Product.user_id == current_user.id
+            Product.id == product_id, Product.user_id == self.current_user.id
             )
-            product = session.exec(statement).first()
+            product = self.session.exec(statement).first()
             
             if not product:
                 raise ItemNotFoundException(type='Product',item_id=product_id)
             product_data = product_update.model_dump(exclude_unset=True)
             for key, value in product_data.items():
                 setattr(product, key, value)
-            session.add(product)
-            session.commit()
-            session.refresh(product)
+            self.session.add(product)
+            self.session.commit()
+            self.session.refresh(product)
             return product
         
         except ItemNotFoundException:
             raise
         
         except IntegrityError as e:
-            session.rollback()
+            self.session.rollback()
             raise ItemInvalidDataException(e)
         
         except Exception as e:
-            session.rollback()
+            self.session.rollback()
             raise InternalServerException(e, __name__)
         
 
-    @staticmethod
-    def delete_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> None:
+    def delete_product(self, product_id: UUID) -> None:
         
         statement = select(Product).where(
-            Product.id == product_id, Product.user_id == current_user.id
+            Product.id == product_id, Product.user_id == self.current_user.id
         )
-        product = session.exec(statement).first()
+        product = self.session.exec(statement).first()
         
         if not product:
             raise ItemNotFoundException(type='Product',item_id=product_id)
-        session.delete(product)
-        session.commit()
+        self.session.delete(product)
+        self.session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)

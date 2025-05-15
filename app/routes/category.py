@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlmodel import Session
 
 from ..core.dependencies import SessionDep
 from ..schemas.category_schema import CreateCategory, ReadCategory, UpdateCategory, NestedCategoryResponse
@@ -8,6 +9,13 @@ from uuid import UUID
 from ..core.dependencies import admin_access, get_current_user
 
 from ..services.category_service import CategoryService
+
+
+def get_category_service(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)
+) -> CategoryService:
+    return CategoryService(session, current_user)
 
 
 router = APIRouter()
@@ -20,8 +28,8 @@ router = APIRouter()
     description="Creates a new category and stores it in the database. Returns the created category.",
     response_model=ReadCategory
 )
-async def create_category(category: CreateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
-    return CategoryService.create_category(category, session, current_user)
+async def create_category(category: CreateCategory, category_service: Annotated[CategoryService, Depends(get_category_service)]) -> dict[str, str | int | None]:
+    return category_service.create_category(category)
 
 
 # Get all categories
@@ -31,8 +39,8 @@ async def create_category(category: CreateCategory, session: SessionDep, current
     description="Retrieve a list of all categories from the database.",
     response_model=list[ReadCategory]
 )
-async def get_categories(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str | int | None]]:
-    return CategoryService.get_categories(session, current_user)
+async def get_categories(category_service: Annotated[CategoryService, Depends(get_category_service)]) -> list[dict[str, str | int | None]]:
+    return category_service.get_categories()
 
 
 # Get categories after validation
@@ -42,14 +50,13 @@ async def get_categories(session: SessionDep, current_user: Annotated[User,Depen
     description="Retrieve a list of all categories from the database with validations like limit, offset and parent id.",
     response_model=list[ReadCategory]
 )
-async def get_validate_categories(
-    session: SessionDep,
-    current_user: Annotated[User,Depends(get_current_user)],
+async def get_pagination_categories(
+    category_service: Annotated[CategoryService, Depends(get_category_service)],
     page: int = 1, 
     size: int = 10,
     parent_id: int | None = None, 
 ) -> list[dict[str, str | int | None]]:
-    return CategoryService.get_pagination_categories(session, current_user, page, size, parent_id)
+    return category_service.get_pagination_categories(page, size, parent_id)
 
 
 
@@ -60,8 +67,8 @@ async def get_validate_categories(
     description='Retrieve all the categories with their nested category',
     response_model=NestedCategoryResponse
 )
-async def nested_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> NestedCategoryResponse:
-    return CategoryService.nested_category(category_id, session, current_user)
+async def nested_category(category_id: UUID, category_service: Annotated[CategoryService, Depends(get_category_service)]) -> NestedCategoryResponse:
+    return category_service.nested_category(category_id)
 
 
 # Get a category by ID
@@ -71,8 +78,8 @@ async def nested_category(category_id: UUID, session: SessionDep, current_user: 
     description="Retrieve the details of a category by its ID.",
     response_model=ReadCategory
 )
-async def read_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str | int | None]:
-    return CategoryService.read_category(category_id, session, current_user)
+async def read_category(category_id: UUID, category_service: Annotated[CategoryService, Depends(get_category_service)]) -> dict[str, str | int | None]:
+    return category_service.read_category(category_id)
 
 
 @router.put(
@@ -81,8 +88,8 @@ async def read_category(category_id: UUID, session: SessionDep, current_user: An
     description='Update the details of category, make sure you provide data that need to be update.',
     response_model=ReadCategory
 )
-async def update_product(category_id: UUID, category_update: UpdateCategory, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> dict[str, str | int | None]:
-    return CategoryService.update_category(category_id, category_update, session, current_user)
+async def update_product(category_id: UUID, category_update: UpdateCategory, category_service: Annotated[CategoryService, Depends(get_category_service)]) -> dict[str, str | int | None]:
+    return category_service.update_category(category_id, category_update)
 
 
 @router.delete(
@@ -90,6 +97,6 @@ async def update_product(category_id: UUID, category_update: UpdateCategory, ses
     summary="Delete a category",
     description="Deletes a category by its ID."
 )
-async def delete_product(category_id: UUID, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]) -> None:
-    return CategoryService.delete_category(category_id, session, current_user)
+async def delete_product(category_id: UUID, category_service: Annotated[CategoryService, Depends(get_category_service)]) -> None:
+    return category_service.delete_category(category_id)
 

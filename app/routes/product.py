@@ -10,6 +10,13 @@ from ..core.dependencies import get_current_user
 from ..models.user_model import User
 
 
+def get_product_service(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)
+) -> ProductService:
+    return ProductService(session, current_user)
+
+
 router = APIRouter()
 
 
@@ -20,8 +27,8 @@ router = APIRouter()
     description="Creates a new product and stores it in the database. Returns the created product.",
     response_model=ReadProduct
 )
-async def create_product(product: CreateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
-    return ProductService.create_product(product, session, current_user)
+async def create_product(product: CreateProduct, product_service: Annotated[ProductService, Depends(get_product_service)]) -> dict[str, str|int]:
+    return product_service.create_product(product)
     
 
 # Get all products
@@ -31,8 +38,8 @@ async def create_product(product: CreateProduct, session: SessionDep, current_us
     description="Retrieve a list of all products from the database.",
     response_model=list[ReadProduct]
 )
-async def get_products(session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> list[dict[str, str|int]]:
-    return ProductService.get_products(session, current_user)
+async def get_products(product_service: Annotated[ProductService, Depends(get_product_service)]) -> list[dict[str, str|int]]:
+    return product_service.get_products()
 
 
 # Get products after validation
@@ -42,16 +49,15 @@ async def get_products(session: SessionDep, current_user: Annotated[User,Depends
     description="Retrieve a list of all products from the database with validations like limit, offset, based on price and specific category.",
     response_model=list[ReadProduct]
 )
-async def get_validate_products(
-    session: SessionDep,
-    current_user: Annotated[User,Depends(get_current_user)],
+async def get_pagination_products(
+    product_service: Annotated[ProductService, Depends(get_product_service)],
     page: int = 1, 
     size: int = 10,
     category_id: int | None = None, 
     price_min: float | None = None, 
     price_max: float | None = None
 ) -> list[dict[str, str|int]]:
-    return ProductService.get_pagination_products(session, current_user, page, size, category_id, price_min, price_max)
+    return product_service.get_pagination_products(page, size, category_id, price_min, price_max)
 
 
 # Get a product by ID
@@ -61,8 +67,8 @@ async def get_validate_products(
     description="Retrieve the details of a product by its ID.",
     response_model=ReadProduct
 )
-async def get_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
-    return ProductService.get_product(product_id, session, current_user)
+async def get_product(product_id: UUID, product_service: Annotated[ProductService, Depends(get_product_service)]) -> dict[str, str|int]:
+    return product_service.get_product(product_id)
 
 
 
@@ -73,8 +79,8 @@ async def get_product(product_id: UUID, session: SessionDep, current_user: Annot
     description="Updates a product by its ID with the provided data.",
     response_model=ReadProduct 
 )
-async def update_product(product_id: UUID, product_update: UpdateProduct, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> dict[str, str|int]:
-    return ProductService.update_product(product_id, product_update, session, current_user)
+async def update_product(product_id: UUID, product_update: UpdateProduct, product_service: Annotated[ProductService, Depends(get_product_service)]) -> dict[str, str|int]:
+    return product_service.update_product(product_id, product_update)
 
 
 # Delete a product
@@ -83,5 +89,5 @@ async def update_product(product_id: UUID, product_update: UpdateProduct, sessio
     summary="Delete a product",
     description="Deletes a product by its ID."
 )
-async def delete_product(product_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> None:
-    return ProductService.delete_product(product_id, session, current_user)
+async def delete_product(product_id: UUID, product_service: Annotated[ProductService, Depends(get_product_service)]) -> None:
+    return product_service.delete_product(product_id)
