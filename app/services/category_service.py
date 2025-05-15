@@ -78,13 +78,20 @@ class CategoryService:
 
     # dependency for nested category
     @staticmethod
-    def get_nested_categories(category: Category):
+    def get_nested_categories(category: Category, user_id: UUID) -> dict:
+
+        if category.user_id != user_id:
+            return None
+
         result = {
             'id':category.id,
             'name':category.name,
             'parent_id':category.parent_id,
-            'subcategories' : [
-                CategoryService.get_nested_categories(sub) for sub in category.subcategories
+            'subcategories': [
+                sub for sub in (
+                    CategoryService.get_nested_categories(sub, user_id) 
+                    for sub in category.subcategories
+                ) if sub
             ]
         }
         return result
@@ -93,10 +100,16 @@ class CategoryService:
     @staticmethod
     def nested_category(category_id: UUID, session: SessionDep, current_user: Annotated[User,Depends(get_current_user)]) -> NestedCategoryResponse:
         try:
-            category = session.get(Category,category_id)
+            
+            statement = select(Category).where(
+            Category.id == category_id,
+            Category.user_id == current_user.id
+            )
+            category = session.exec(statement).first()
+            
             if not category:
                 raise ItemNotFoundException(type='Category', item_id=category_id)
-            return CategoryService.get_nested_categories(category)
+            return CategoryService.get_nested_categories(category, current_user.id)
         
         except ItemNotFoundException:
             raise
