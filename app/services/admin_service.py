@@ -8,9 +8,11 @@ from ..core.dependencies import admin_access
 
 class AdminService:
     
-    @staticmethod
-    def register_first_admin(user: UserIn, session: SessionDep):
-        existing_user = session.exec(select(User)).first()
+    def __init__(self, session: SessionDep):
+        self.session = session
+        
+    def register_first_admin(self,user: UserIn):
+        existing_user = self.session.exec(select(User)).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -25,21 +27,20 @@ class AdminService:
             role=Role.admin
         )
 
-        session.add(user_in_db)
-        session.commit()
-        session.refresh(user_in_db)
+        self.session.add(user_in_db)
+        self.session.commit()
+        self.session.refresh(user_in_db)
         return user_in_db
     
-    @staticmethod
-    def register_user(user: UserIn, role:Role, session: SessionDep, current_user: Annotated[User, Depends(admin_access)]):
-        any_user_exists = session.exec(select(User)).first()
+    def register_user(self,user: UserIn, role:Role, current_user: Annotated[User, Depends(admin_access)]):
+        any_user_exists = self.session.exec(select(User)).first()
         if not any_user_exists:
             if role != Role.admin:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="The first user must be an admin.register-first-admin endpoint"
                 )
-        existing_user = session.exec(select(User).where(User.email == user.email)).first()
+        existing_user = self.session.exec(select(User).where(User.email == user.email)).first()
         if existing_user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
@@ -51,14 +52,13 @@ class AdminService:
             role=role,
             )
         
-        session.add(user_in_db)
-        session.commit()
-        session.refresh(user_in_db)
+        self.session.add(user_in_db)
+        self.session.commit()
+        self.session.refresh(user_in_db)
         return user_in_db
     
-    @staticmethod
     def get_all_users(
-        session: SessionDep,
+        self,
         current_user: Annotated[User, Depends(admin_access)],
         limit: int = Query(default=10, ge=1),
         skip: int = Query(default=0, ge=0),
@@ -70,5 +70,5 @@ class AdminService:
         else:
             query = select(User).where(User.role == role).offset(skip).limit(limit)
 
-        users = session.exec(query).all()
+        users = self.session.exec(query).all()
         return users

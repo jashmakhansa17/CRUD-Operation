@@ -3,20 +3,28 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
 from typing import Annotated
 from pydantic import EmailStr
+from sqlmodel import Session
 from ..models.user_model import User
 from ..schemas.user_admin_schema import UserIn, UserOut, Token
 from ..core.dependencies import SessionDep, get_current_user, oauth2_scheme
 from ..services.users_service import UserService
 
+def get_users_service(
+    session: SessionDep ,
+) -> UserService:
+    return UserService(session)
+
 router = APIRouter()
 
 @router.post("/register", response_model=UserOut, tags=["all"])
-async def register_user(user: UserIn, session: SessionDep):
-  return UserService.register_user(user, session) 
+async def register_user(user: UserIn, users_service: Annotated[UserService, Depends(get_users_service)]):
+
+    return users_service.register_user(user) 
 
 @router.post("/login", response_model=Token,tags=["all"])
-async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep, response: Response):
-    return UserService.login_user(form_data, session, response)
+async def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], users_service: Annotated[UserService, Depends(get_users_service)], response: Response):
+ 
+    return users_service.login_user(form_data, response)
 
 @router.get("/me", response_model=UserOut,tags=["all"]) 
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
@@ -24,34 +32,36 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 
 @router.post("/change-password",tags=["all"])
 async def change_password(current_password: str,new_password: str,
-    current_user: Annotated[User, Depends(get_current_user)],session: SessionDep):
+    current_user: Annotated[User, Depends(get_current_user)], users_service: Annotated[UserService, Depends(get_users_service)]):
     
-    return UserService.change_password(current_password, new_password, current_user, session)
+    return users_service.change_password(current_password, new_password, current_user)
 
 @router.post("/forgot-password",tags=["all"])
 async def forgot_password(
     email: EmailStr,
     background_tasks: BackgroundTasks,
-    session: SessionDep,
+    users_service: Annotated[UserService, Depends(get_users_service)]
 ):
-    return UserService.forgot_password(email, background_tasks, session)
+   
+    return users_service.forgot_password(email, background_tasks)
 
 @router.get("/reset-password", response_class=HTMLResponse, tags=["Not to Use"])
 async def show_reset_form(request: Request, token: str):
     return UserService.show_reset_form(request, token)
     
 @router.post("/reset-password",tags=["Not to Use"])
-async def reset_password(token: Annotated[str, Form(...)],new_password: Annotated[str, Form(...)],session: SessionDep):
-    return UserService.reset_password(token, new_password, session)
+async def reset_password(token: Annotated[str, Form(...)],new_password: Annotated[str, Form(...)], users_service: Annotated[UserService, Depends(get_users_service)]):
+   
+    return users_service.reset_password(token, new_password)
     
 @router.post("/refresh-token", response_model=Token,tags=["all"])
-async def refresh_token(refresh_token: str, session: SessionDep):
+async def refresh_token(refresh_token: str, users_service: Annotated[UserService, Depends(get_users_service)]):
   
-    return UserService.refresh_token(refresh_token, session)
+    return users_service.refresh_token(refresh_token)
   
 @router.post("/logout", tags=["all"])
-async def logout(session: SessionDep,current_user: Annotated[User, Depends(get_current_user)],
+async def logout(users_service: Annotated[UserService, Depends(get_users_service)], current_user: Annotated[User, Depends(get_current_user)],
             request: Request,response: Response,access_token: str = Depends(oauth2_scheme)):
-  
-  return UserService.logout(session, current_user, request, response, access_token)
+
+    return users_service.logout(current_user, request, response, access_token)
   

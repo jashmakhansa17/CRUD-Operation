@@ -16,15 +16,17 @@ from ..core.config import settings
 
 class UserService:
     
-    @staticmethod
-    def register_user(user: UserIn, session: SessionDep):
-        any_user_exists = session.exec(select(User)).first()
+    def __init__(self, session: SessionDep):
+        self.session = session
+    
+    def register_user(self, user: UserIn):
+        any_user_exists = self.session.exec(select(User)).first()
         if not any_user_exists:
             raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="The first user must be an admin."
                 )
-        existing_user = session.exec(select(User).where(User.email == user.email)).first()
+        existing_user = self.session.exec(select(User).where(User.email == user.email)).first()
         if existing_user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
@@ -35,14 +37,13 @@ class UserService:
             hashed_password=hashed_password,
             role="user")
         
-        session.add(user_in_db)
-        session.commit()
-        session.refresh(user_in_db)
+        self.session.add(user_in_db)
+        self.session.commit()
+        self.session.refresh(user_in_db)
         return user_in_db
     
-    @staticmethod
-    def login_user(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep, response: Response):
-        user = session.exec(select(User).where(User.email == form_data.username)).first()
+    def login_user(self, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], response: Response):
+        user = self.session.exec(select(User).where(User.email == form_data.username)).first()
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/user!")
         if not pwd_context.verify(form_data.password, user.hashed_password):
@@ -57,25 +58,23 @@ class UserService:
 
         return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
     
-    @staticmethod
-    def change_password(current_password: str,new_password: str,
-        current_user: Annotated[User, Depends(get_current_user)],session: SessionDep):
+    def change_password(self, current_password: str,new_password: str,
+        current_user: Annotated[User, Depends(get_current_user)]):
         
         if not pwd_context.verify(current_password, current_user.hashed_password):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect current password!")
         UserIn.validate_password(new_password)
         current_user.hashed_password = pwd_context.hash(new_password)
-        session.add(current_user)
-        session.commit()
+        self.session.add(current_user)
+        self.session.commit()
         return {"message": "Password updated successfully"}
     
-    @staticmethod
     def forgot_password(
+        self,
         email: EmailStr,
-        background_tasks: BackgroundTasks,
-        session: SessionDep,
+        background_tasks: BackgroundTasks
     ):
-        user = session.exec(select(User).where(User.email == email)).first()
+        user = self.session.exec(select(User).where(User.email == email)).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -178,7 +177,7 @@ class UserService:
         </html>
         """
         
-    def reset_password(token: Annotated[str, Form(...)],new_password: Annotated[str, Form(...)],session: SessionDep):
+    def reset_password(self, token: Annotated[str, Form(...)],new_password: Annotated[str, Form(...)]):
         try:
         
             data = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -189,34 +188,33 @@ class UserService:
             
             UserIn.validate_password(new_password)
             
-            user = session.exec(select(User).where(User.id == uuid)).first()
+            user = self.session.exec(select(User).where(User.id == uuid)).first()
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
             
             user.hashed_password = pwd_context.hash(new_password)
-            session.add(user)
-            session.commit()
+            self.session.add(user)
+            self.session.commit()
 
             return {"message": "Password has been reset successfully"}
         
         except InvalidTokenError:
             raise HTTPException(status_code=400, detail="Invalid or expired token")
         
-    @staticmethod
-    def refresh_token(refresh_token: str, session: SessionDep):
+    def refresh_token(self, refresh_token: str):
         try:
             data = jwt.decode(refresh_token, settings.secret_key, algorithms=[settings.algorithm])
             if data.get("type") != "refresh":
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type: refresh token required")
             
-            blacklisted = session.exec(select(BlacklistedToken).where(BlacklistedToken.refresh_token == data.get("jti"))).first()
+            blacklisted = self.session.exec(select(BlacklistedToken).where(BlacklistedToken.refresh_token == data.get("jti"))).first()
             if blacklisted:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token has been blacklisted")
             
             uuid: str = data.get("uuid")
             if uuid is None:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-            user = session.exec(select(User).where(User.id == uuid)).first()
+            user = self.session.exec(select(User).where(User.id == uuid)).first()
             if user is None:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
             access_token = create_access_token(data={"uuid": str(user.id)})
@@ -226,8 +224,7 @@ class UserService:
         except Exception as error:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
         
-    @staticmethod
-    def logout(session: SessionDep,current_user: Annotated[User, Depends(get_current_user)],
+    def logout(self, current_user: Annotated[User, Depends(get_current_user)],
             request: Request,response: Response,access_token: str = Depends(oauth2_scheme)):
     
         try:
@@ -248,9 +245,9 @@ class UserService:
             access_token=data_access.get("jti"),
             refresh_token=data_refresh.get("jti")
         )
-        session.add(blacklisted) 
-        session.commit()
+        self.session.add(blacklisted) 
+        self.session.commit()
         response.delete_cookie("refresh_token")
-        clean_old_tokens(session)
+        clean_old_tokens(self.session)
         return {"message": f"{current_user.email} is logged out successfully"}
     
