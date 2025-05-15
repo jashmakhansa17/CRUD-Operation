@@ -3,11 +3,13 @@ from uuid import UUID
 
 # Schemas for Product
 
+
 class CreateProduct(BaseModel):
     name: str
     description: str
     price: float = Field(gt=0)
     category_id: UUID
+
 
 class ReadProduct(BaseModel):
     id: UUID
@@ -25,4 +27,3 @@ class UpdateProduct(BaseModel):
     description: str | None = None
     price: float | None = Field(default=None, gt=0)
     category_id: UUID | None = None
-

@@ -4,9 +4,11 @@ from uuid import UUID
 
 # Schemas for Category
 
+
 class CreateCategory(BaseModel):
     name: str
     parent_id: UUID | None = None
+
 
 class ReadCategory(BaseModel):
     id: UUID
@@ -16,8 +18,9 @@ class ReadCategory(BaseModel):
     class Config:
         orm_mode = True
 
+
 class UpdateCategory(BaseModel):
-    name: str| None = None
+    name: str | None = None
     parent_id: UUID | None = None
 
 

@@ -25,3 +25,5 @@ DETAIL:  Key (name, category_id)=(first, 2ead3396-7629-43c6-877c-dc8a4af85028) a
 2025-05-14 19:31 - WARNING - duplicate key value violates unique constraint "uq_product_name_category"
 DETAIL:  Key (name, category_id)=(first, 2ead3396-7629-43c6-877c-dc8a4af85028) already exists.
 
+2025-05-15 14:58 - WARNING - Product not found
+2025-05-15 14:58 - WARNING - Category not found

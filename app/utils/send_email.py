@@ -2,6 +2,7 @@ from email.message import EmailMessage
 from aiosmtplib import SMTP
 from ..core.config import settings
 
+
 async def send_reset_email(to_email: str, token: str):
     message = EmailMessage()
     message["From"] = settings.email_username
@@ -28,11 +29,15 @@ async def send_reset_email(to_email: str, token: str):
     </html>
     """
 
-    message.set_content("Please use an email client that supports HTML to view this message.")
-    message.add_alternative(html_content, subtype='html')
+    message.set_content(
+        "Please use an email client that supports HTML to view this message."
+    )
+    message.add_alternative(html_content, subtype="html")
 
     try:
-        smtp = SMTP(hostname=settings.email_host, port=settings.email_port, start_tls=True)
+        smtp = SMTP(
+            hostname=settings.email_host, port=settings.email_port, start_tls=True
+        )
         await smtp.connect()
         await smtp.login(settings.email_username, settings.email_password)
         await smtp.send_message(message)
