@@ -5,45 +5,15 @@ from ..models.user_model import User
 from ..schemas.user_admin_schema import UserIn, Role
 from ..core.dependencies import SessionDep, pwd_context, admin_access
 
-
 class AdminService:
     def __init__(self, session: SessionDep):
         self.session = session
-
-    def register_first_admin(self, user: UserIn):
-        existing_user = self.session.exec(select(User)).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Initial admin already created",
-            )
-
-        hashed_password = pwd_context.hash(user.password)
-        user_in_db = User(
-            email=user.email,
-            full_name=user.full_name,
-            hashed_password=hashed_password,
-            role=Role.admin,
-        )
-
-        self.session.add(user_in_db)
-        self.session.commit()
-        self.session.refresh(user_in_db)
-        return user_in_db
 
     def register_user(
         self,
         user: UserIn,
         role: Role,
-        current_user: Annotated[User, Depends(admin_access)],
     ):
-        any_user_exists = self.session.exec(select(User)).first()
-        if not any_user_exists:
-            if role != Role.admin:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="The first user must be an admin.register-first-admin endpoint",
-                )
         existing_user = self.session.exec(
             select(User).where(User.email == user.email)
         ).first()

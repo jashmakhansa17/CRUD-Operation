@@ -21,19 +21,13 @@ from ..core.dependencies import SessionDep, pwd_context, get_current_user, oauth
 from ..core.auth import create_access_token, create_refresh_token, clean_old_tokens
 from ..utils.send_email import send_reset_email
 from ..core.config import settings
-
+# from ..core.exceptions import logger
 
 class UserService:
     def __init__(self, session: SessionDep):
         self.session = session
 
     def register_user(self, user: UserIn):
-        any_user_exists = self.session.exec(select(User)).first()
-        if not any_user_exists:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="The first user must be an admin.",
-            )
         existing_user = self.session.exec(
             select(User).where(User.email == user.email)
         ).first()
@@ -79,7 +73,6 @@ class UserService:
             value=refresh_token,
             max_age=settings.refresh_token_expire_minutes,
         )
-
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,

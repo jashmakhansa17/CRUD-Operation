@@ -133,7 +133,7 @@ async def read_category(
     description="Update the details of category, make sure you provide data that need to be update.",
     response_model=ReadCategory,
 )
-async def update_product(
+async def update_category(
     category_id: UUID,
     category_update: UpdateCategory,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
@@ -146,7 +146,7 @@ async def update_product(
     summary="Delete a category",
     description="Deletes a category by its ID.",
 )
-async def delete_product(
+async def delete_category(
     category_id: UUID,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ) -> None:
