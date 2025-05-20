@@ -15,13 +15,6 @@ def get_admin_service(
 router = APIRouter()
 
 
-@router.post("/register-first-admin", response_model=UserOut)
-async def register_first_admin(
-    user: UserIn, admin_service: Annotated[AdminService, Depends(get_admin_service)]
-):
-    return admin_service.register_first_admin(user)
-
-
 @router.post("/registers", response_model=UserOut, summary="Register a new user/admin")
 async def register_user(
     user: UserIn,

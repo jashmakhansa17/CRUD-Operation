@@ -20,9 +20,7 @@ from ..core.exceptions import (
 
 
 class CategoryService:
-    def __init__(
-        self, session: SessionDep, current_user: User
-    ):
+    def __init__(self, session: SessionDep, current_user: User):
         self.session = session
         self.current_user = current_user
 
@@ -43,25 +41,23 @@ class CategoryService:
         except Exception as e:
             self.session.rollback()
             raise InternalServerException(e, __name__)
-        
+
     def create_category_for_user(self, user_id: UUID, category: CreateCategory):
         try:
-            statement = select(User).where(
-                User.id == user_id, User.role == 'user'
-            )
+            statement = select(User).where(User.id == user_id, User.role == "user")
             user = self.session.exec(statement).first()
 
             if not user:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+                )
 
-            db_category = Category(
-                **category.model_dump(), user_id=user_id
-            )
+            db_category = Category(**category.model_dump(), user_id=user_id)
             self.session.add(db_category)
             self.session.commit()
             self.session.refresh(db_category)
             return db_category
-        
+
         except HTTPException:
             raise
 
@@ -72,7 +68,6 @@ class CategoryService:
         except Exception as e:
             self.session.rollback()
             raise InternalServerException(e, __name__)
-
 
     def get_categories(self) -> list[dict[str, str | int | None]]:
         try:
@@ -88,7 +83,7 @@ class CategoryService:
 
         except Exception as e:
             raise InternalServerException(e, __name__)
-        
+
     def get_all_categories(self) -> list[dict[str, str | int | None]]:
         try:
             categories = self.session.exec(select(Category)).all()

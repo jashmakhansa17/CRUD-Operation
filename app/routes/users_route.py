@@ -43,10 +43,11 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 async def change_password(
     current_password: str,
     new_password: str,
+    confirm_password: str,
     current_user: Annotated[User, Depends(get_current_user)],
     users_service: Annotated[UserService, Depends(get_users_service)],
 ):
-    return users_service.change_password(current_password, new_password, current_user)
+    return users_service.change_password(current_password, new_password,confirm_password, current_user)
 
 
 @router.post("/forgot-password", tags=["all"])
@@ -67,9 +68,10 @@ async def show_reset_form(request: Request, token: str):
 async def reset_password(
     token: Annotated[str, Form(...)],
     new_password: Annotated[str, Form(...)],
+    confirm_password: Annotated[str, Form(...)],
     users_service: Annotated[UserService, Depends(get_users_service)],
 ):
-    return users_service.reset_password(token, new_password)
+    return users_service.reset_password(token, new_password, confirm_password)
 
 
 @router.post("/refresh-token", response_model=Token, tags=["all"])

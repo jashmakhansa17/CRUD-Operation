@@ -53,7 +53,7 @@ class ProductService:
 
         except Exception as e:
             raise InternalServerException(e, __name__)
-        
+
     def get_all_products(self):
         try:
             products = self.session.exec(select(Product)).all()
