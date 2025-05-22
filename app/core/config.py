@@ -24,13 +24,13 @@ class Settings(BaseSettings):
     algorithm: str
     access_token_expire_minutes: int
     refresh_token_expire_minutes: int
+    jwt_token_expire_minutes: int
 
     email_host: str
     email_port: int
     email_username: str
     email_password: str
 
-    email_expire_minutes: int
 
     blacklisted_token_expire_minutes: int
 

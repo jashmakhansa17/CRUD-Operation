@@ -1,12 +1,10 @@
 from fastapi.testclient import TestClient
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
-from fastapi import status
 from app.main import app
 from app.database import get_session, DATABASE_URL
 from app.core.dependencies import pwd_context
 from app.models.user_model import User
-from app.models.blacklistedtoken_model import BlacklistedToken
 
 engine = create_engine(DATABASE_URL, echo=True)
 
@@ -37,16 +35,16 @@ def session():
 
 
 @pytest.fixture()
-def test_admin():
-    return {"username": "admin@example.com", "password": "Password@123"}
+def admin_data():
+    return {"username": "admin12@gmail.com","full_name": "admin name","password": "Admin@123"}
 
 
 @pytest.fixture()
-def test_login_admin(test_admin, session):
-    hashed_password = pwd_context.hash(test_admin["password"])
+def login_admin(admin_data, session):
+    hashed_password = pwd_context.hash(admin_data["password"])
     user = User(
-        email=test_admin["username"],
-        full_name="Test Admin",
+        email=admin_data["username"],
+        full_name=admin_data["full_name"],
         hashed_password=hashed_password,
         role="admin",
     )
@@ -56,24 +54,22 @@ def test_login_admin(test_admin, session):
 
     response = client.post(
         "/login",
-        data={"username": test_admin["username"], "password": test_admin["password"]},
+        data={"username": admin_data["username"], "password": admin_data["password"]},
     )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    return data["access_token"]
+    return response
 
 
 @pytest.fixture()
-def test_user():
-    return {"username": "user@example.com", "password": "UserPass@123"}
+def user_data():
+    return {"username": "user12@gmail.com","full_name": "user name", "password": "User@123"}
 
 
 @pytest.fixture()
-def test_login_user(test_user, session):
-    hashed_password = pwd_context.hash(test_user["password"])
+def login_user(user_data, session):
+    hashed_password = pwd_context.hash(user_data["password"])
     user = User(
-        email=test_user["username"],
-        full_name="Test User",
+        email=user_data["username"],
+        full_name=user_data["full_name"],
         hashed_password=hashed_password,
         role="user",
     )
@@ -83,8 +79,45 @@ def test_login_user(test_user, session):
 
     response = client.post(
         "/login",
-        data={"username": test_user["username"], "password": test_user["password"]},
+        data={"username": user_data["username"], "password": user_data["password"]},
     )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    return data["access_token"]
+    return response
+
+@pytest.fixture()
+def register_user_and_admin_by_admin(login_admin):
+        token = login_admin.json()["access_token"]
+
+        response = client.post(
+            "/registers?role=user",
+            json={
+                "email": "user123@gmail.com",
+                "full_name": "user name",
+                "password": "User@123",
+            },
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        return response
+    
+@pytest.fixture()
+def register_user():
+        response = client.post(
+            "/register",
+            json={
+                "email": "user123@gmail.com",
+                "full_name": "user name",
+                "password": "User@123",
+            },
+        )
+        return response
+    
+@pytest.fixture()
+def logout_user(login_user):
+        token = login_user.json()["access_token"]
+        response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
+        return response
+    
+@pytest.fixture()
+def logout_admin(login_admin):
+        token = login_admin.json()["access_token"]
+        response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
+        return response

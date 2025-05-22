@@ -22,7 +22,7 @@ async def send_reset_email(to_email: str, token: str):
                 <a href="{reset_link}" style="background-color: #007BFF; color: white; padding: 10px 20px;
                    text-decoration: none; border-radius: 5px;">Reset Password</a>
             </p>
-            <p><strong>Note:</strong> This link is valid for only {settings.email_expire_minutes} minutes.</p>
+            <p><strong>Note:</strong> This link is valid for only {settings.jwt_token_expire_minutes} minutes.</p>
             <p>If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
             <p>Thank you,<br>The Support Team</p>
         </body>

@@ -1,7 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field as PydanticField, field_validator
+from pydantic import BaseModel, EmailStr, Field as PydanticField, field_validator, ValidationError
 from typing import Annotated
 from enum import Enum
-from fastapi import HTTPException,status
+from fastapi import HTTPException,status, Form, Query
 import re
 from uuid import UUID
 
@@ -12,10 +12,10 @@ class Role(str, Enum):
 
 
 class UserIn(BaseModel):
+    
     email: EmailStr
     full_name: Annotated[str, PydanticField(min_length=1)]
     password: str
-
     @field_validator("password")
     @classmethod
     def validate_password(cls, password: str) -> str:
@@ -43,3 +43,33 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+class ForgotPassword(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+    
+class ResetPassword():
+    def __init__(
+        self,
+        token: Annotated[str, Form(...)],
+        new_password: Annotated[str, Form(...)],
+        confirm_password: Annotated[str, Form(...)],
+    ):
+        self.token = token
+        self.new_password = new_password
+        self.confirm_password = confirm_password
+        
+class Filter():
+    def __init__(
+        self,
+        limit:int = Query(default=10, ge=1),
+        skip: int = Query(default=0, ge=0),
+        role: str = Query(default="all",enum=["user", "admin", "all"], description="Filter by user role")
+    ):
+        self.limit=limit
+        self.skip=skip
+        self.role=role
+        
+class Message(BaseModel):
+    message: str
