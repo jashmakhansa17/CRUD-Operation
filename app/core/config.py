@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent  # app/
 ENV_PATH = BASE_DIR.parent  # project_root/.env
 
-load_dotenv(dotenv_path=ENV_PATH)
+load_dotenv(dotenv_path=ENV_PATH / '.env')
 
 
 class Environments(str, Enum):
@@ -55,6 +55,10 @@ class StageSettings(Settings):
 
     class Config:
         env_file = ENV_PATH / ".env.stage"
+
+
+class TestSettings(settings):
+    pass
 
 
 def get_config():

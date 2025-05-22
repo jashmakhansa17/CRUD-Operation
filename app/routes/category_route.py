@@ -32,17 +32,18 @@ router = APIRouter()
 # Create a category
 @router.post(
     "/",
-    summary="Create a category",
-    description="Creates a new category and stores it in the database. Returns the created category.",
+    summary="Create a category for current admin",
+    description="Creates a new category and stores it in the database for current person. Returns the created category.",
     response_model=ReadCategory,
 )
-async def create_category(
+async def create_category_for_current_admin(
     category: CreateCategory,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ) -> dict[str, str | int | None]:
-    return category_service.create_category(category)
+    return category_service.create_category_for_current_admin(category)
 
 
+# create a category for user
 @router.post(
     "/user",
     summary="Create a category for user",
@@ -57,17 +58,17 @@ async def create_category_for_user(
     return category_service.create_category_for_user(user_id,category)
 
 
-# Get all categories
+# Get categories for current person
 @router.get(
     "/",
-    summary="Get all categories",
-    description="Retrieve a list of all categories from the database for specific user.",
+    summary="Get categories for current person",
+    description="Retrieve a list of all categories from the database for current person.",
     response_model=list[ReadCategory],
 )
-async def get_categories(
+async def get_categories_for_current_person(
     category_service: Annotated[CategoryService, Depends(get_category_service_all)],
 ) -> list[dict[str, str | int | None]]:
-    return category_service.get_categories()
+    return category_service.get_categories_for_current_person()
 
 
 # Get all categories for admin
@@ -77,13 +78,13 @@ async def get_categories(
     description="Retrieve a list of all categories of all users from the database.",
     response_model=list[ReadCategory],
 )
-async def get_all_categories(
+async def get_all_categories_for_admin(
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ) -> list[dict[str, str | int | None]]:
-    return category_service.get_all_categories()
+    return category_service.get_all_categories_for_admin()
 
 
-# Get categories after validation
+# Get categories after pagination
 @router.get(
     "/pagination",
     summary="Get all categories by validating",
@@ -94,7 +95,7 @@ async def get_pagination_categories(
     category_service: Annotated[CategoryService, Depends(get_category_service_all)],
     page: int = 1,
     size: int = 10,
-    parent_id: int | None = None,
+    parent_id: int | None  = None,
 ) -> list[dict[str, str | int | None]]:
     return category_service.get_pagination_categories(page, size, parent_id)
 
@@ -120,34 +121,62 @@ async def nested_category(
     description="Retrieve the details of a category by its ID.",
     response_model=ReadCategory,
 )
-async def read_category(
+async def get_category_by_id(
     category_id: UUID,
     category_service: Annotated[CategoryService, Depends(get_category_service_all)],
 ) -> dict[str, str | int | None]:
-    return category_service.read_category(category_id)
+    return category_service.get_category_by_id(category_id)
 
 
 @router.put(
     "/{category_id}",
-    summary="Update a category by ID",
-    description="Update the details of category, make sure you provide data that need to be update.",
+    summary="Update a category for current admin by ID",
+    description="Update the details of category for current admin, make sure you provide data that need to be update.",
     response_model=ReadCategory,
 )
-async def update_category(
+async def update_category_for_current_admin(
     category_id: UUID,
     category_update: UpdateCategory,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ) -> dict[str, str | int | None]:
-    return category_service.update_category(category_id, category_update)
+    return category_service.update_category_for_current_admin(category_id, category_update)
+
+
+@router.put(
+    "/user/{user_id}",
+    summary="Update a category for user by ID",
+    description="Update the details of category for user, make sure you provide data that need to be update.",
+    response_model=ReadCategory,
+)
+async def update_category_for_user(
+    category_id: UUID,
+    user_id: UUID,
+    category_update: UpdateCategory,
+    category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
+) -> dict[str, str | int | None]:
+    return category_service.update_category_for_user(user_id, category_id, category_update)
 
 
 @router.delete(
     "/{category_id}",
-    summary="Delete a category",
-    description="Deletes a category by its ID.",
+    summary="Delete a category for a current admin",
+    description="Deletes a category for admin by its ID.",
 )
-async def delete_category(
+async def delete_category_for_current_admin(
     category_id: UUID,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ) -> None:
-    return category_service.delete_category(category_id)
+    return category_service.delete_category_for_current_admin(category_id)
+
+
+@router.delete(
+    '/user/{user_id}',
+    summary='Delete a category for user',
+    description='Deletes a category for user by its ID.'
+)
+async def delete_category_for_user(
+    category_id: UUID,
+    user_id: UUID,
+    category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
+) -> None:
+    return category_service.delete_category_for_user(user_id, category_id)

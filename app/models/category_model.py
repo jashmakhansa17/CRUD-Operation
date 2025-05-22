@@ -18,3 +18,4 @@ class Category(SQLModel, table=True):
     )
     subcategories: list["Category"] = Relationship()
     products: list["Product"] = Relationship()
+    

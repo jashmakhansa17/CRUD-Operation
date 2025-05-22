@@ -2,10 +2,19 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from .constants import (
     item_not_found_exception,
+    user_not_found_exception,
     item_invalid_data_exception,
     internal_server_exception,
 )
 from .logers import logger
+
+
+class UserNotFoundException(HTTPException):
+    def __init__(self, type, user_id=None):
+        message = user_not_found_exception(type=type, user_id=user_id)
+        logger.warning(message)
+        
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=message)
 
 
 class ItemNotFoundException(HTTPException):
@@ -17,9 +26,12 @@ class ItemNotFoundException(HTTPException):
 
 
 class ItemInvalidDataException(HTTPException):
-    def __init__(self, e: IntegrityError):
+    def __init__(self, e: IntegrityError = None):
         message = item_invalid_data_exception
-        logger.warning(e.orig)
+        if e:
+            logger.warning(e.orig)
+        else:
+            logger.warning(message)
 
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
 
