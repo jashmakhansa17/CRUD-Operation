@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent  # app/
 ENV_PATH = BASE_DIR.parent  # project_root/.env
 
-load_dotenv(dotenv_path=ENV_PATH)
+load_dotenv(dotenv_path=ENV_PATH / '.env')
 
 
 class Environments(str, Enum):
@@ -24,13 +24,13 @@ class Settings(BaseSettings):
     algorithm: str
     access_token_expire_minutes: int
     refresh_token_expire_minutes: int
+    jwt_token_expire_minutes: int
 
     email_host: str
     email_port: int
     email_username: str
     email_password: str
 
-    email_expire_minutes: int
 
     blacklisted_token_expire_minutes: int
 
@@ -55,6 +55,10 @@ class StageSettings(Settings):
 
     class Config:
         env_file = ENV_PATH / ".env.stage"
+
+
+class TestSettings(settings):
+    pass
 
 
 def get_config():

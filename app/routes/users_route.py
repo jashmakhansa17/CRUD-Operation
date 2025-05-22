@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, Request, Form, Response
+from fastapi import APIRouter, Depends, BackgroundTasks, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import HTMLResponse
 from typing import Annotated
 from pydantic import EmailStr
 from ..models.user_model import User
-from ..schemas.user_admin_schema import UserIn, UserOut, Token
+from ..schemas.user_admin_schema import UserIn, UserOut, Token, ForgotPassword, ResetPassword, Message
 from ..core.dependencies import SessionDep, get_current_user, oauth2_scheme
 from ..services.users_service import UserService
 
@@ -39,17 +39,16 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
     return current_user
 
 
-@router.post("/change-password", tags=["all"])
+@router.post("/change-password", response_model=Message, tags=["all"])
 async def change_password(
-    current_password: str,
-    new_password: str,
+    password: ForgotPassword,
     current_user: Annotated[User, Depends(get_current_user)],
     users_service: Annotated[UserService, Depends(get_users_service)],
 ):
-    return users_service.change_password(current_password, new_password, current_user)
+    return users_service.change_password(password, current_user)
 
 
-@router.post("/forgot-password", tags=["all"])
+@router.post("/forgot-password", response_model=Message, tags=["all"])
 async def forgot_password(
     email: EmailStr,
     background_tasks: BackgroundTasks,
@@ -63,13 +62,12 @@ async def show_reset_form(request: Request, token: str):
     return UserService.show_reset_form(request, token)
 
 
-@router.post("/reset-password", tags=["Not to Use"])
+@router.post("/reset-password", response_model=Message, tags=["Not to Use"])
 async def reset_password(
-    token: Annotated[str, Form(...)],
-    new_password: Annotated[str, Form(...)],
+    reset: Annotated[ResetPassword, Depends()],
     users_service: Annotated[UserService, Depends(get_users_service)],
 ):
-    return users_service.reset_password(token, new_password)
+    return users_service.reset_password(reset)
 
 
 @router.post("/refresh-token", response_model=Token, tags=["all"])
@@ -80,7 +78,7 @@ async def refresh_token(
     return users_service.refresh_token(refresh_token)
 
 
-@router.post("/logout", tags=["all"])
+@router.post("/logout", response_model=Message, tags=["all"])
 async def logout(
     users_service: Annotated[UserService, Depends(get_users_service)],
     current_user: Annotated[User, Depends(get_current_user)],

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 
 
@@ -16,8 +16,7 @@ class ReadCategory(BaseModel):
     parent_id: UUID | None
     user_id: UUID
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UpdateCategory(BaseModel):
@@ -28,9 +27,11 @@ class UpdateCategory(BaseModel):
 class NestedCategoryResponse(BaseModel):
     id: UUID
     name: str
-    patent_id: UUID | None
+    parent_id: UUID | None
     user_id: UUID
     subcategories: list["NestedCategoryResponse"] = []
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+NestedCategoryResponse.model_rebuild()

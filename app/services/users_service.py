@@ -4,7 +4,6 @@ from fastapi import (
     status,
     BackgroundTasks,
     Request,
-    Form,
     Response,
 )
 from fastapi.security import OAuth2PasswordRequestForm
@@ -13,15 +12,22 @@ from jwt.exceptions import InvalidTokenError
 from typing import Annotated
 from sqlmodel import select
 from pydantic import EmailStr
-from datetime import timedelta
+from fastapi.templating import Jinja2Templates
 from ..models.user_model import User
 from ..models.blacklistedtoken_model import BlacklistedToken
-from ..schemas.user_admin_schema import UserIn
+from ..schemas.user_admin_schema import UserIn, ForgotPassword, ResetPassword
 from ..core.dependencies import SessionDep, pwd_context, get_current_user, oauth2_scheme
-from ..core.auth import create_access_token, create_refresh_token, clean_old_tokens
+from ..core.auth import (
+    create_access_token,
+    create_refresh_token,
+    clean_old_tokens,
+    create_jwt_token,
+)
 from ..utils.send_email import send_reset_email
 from ..core.config import settings
-# from ..core.exceptions import logger
+
+templates = Jinja2Templates(directory="app/templates")
+
 
 class UserService:
     def __init__(self, session: SessionDep):
@@ -81,17 +87,23 @@ class UserService:
 
     def change_password(
         self,
-        current_password: str,
-        new_password: str,
+        password: ForgotPassword,
         current_user: Annotated[User, Depends(get_current_user)],
     ):
-        if not pwd_context.verify(current_password, current_user.hashed_password):
+        if not pwd_context.verify(
+            password.current_password, current_user.hashed_password
+        ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Incorrect current password!",
             )
-        UserIn.validate_password(new_password)
-        current_user.hashed_password = pwd_context.hash(new_password)
+        UserIn.validate_password(password.new_password)
+        if password.new_password != password.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Confirm password must be same as New password!",
+            )
+        current_user.hashed_password = pwd_context.hash(password.new_password)
         self.session.add(current_user)
         self.session.commit()
         return {"message": "Password updated successfully"}
@@ -102,10 +114,7 @@ class UserService:
             raise HTTPException(status_code=404, detail="User not found")
 
         token_data = {"uuid": str(user.id)}
-        reset_token = create_access_token(
-            data=token_data,
-            expires_delta=timedelta(minutes=settings.email_expire_minutes),
-        )
+        reset_token = create_jwt_token(data=token_data)
 
         background_tasks.add_task(send_reset_email, email, reset_token)
 
@@ -113,111 +122,38 @@ class UserService:
 
     @staticmethod
     def show_reset_form(request: Request, token: str):
-        return f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>Reset Your Password</title>
-        <style>
-            body {{
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            }}
-            .container {{
-            background: #ffffff;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            width: 100%;
-            max-width: 400px;
-            }}
-            h2 {{
-            margin-bottom: 1.5rem;
-            color: #333333;
-            text-align: center;
-            }}
-            .form-group {{
-            margin-bottom: 1rem;
-            }}
-            input[type="password"] {{
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.2s ease;
-            }}
-            input[type="password"]:focus {{
-            border-color: #007bff;
-            outline: none;
-            }}
-            button {{
-            width: 100%;
-            padding: 0.75rem;
-            background: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            }}
-            button:hover {{
-            background: #0056b3;
-            }}
-            .note {{
-            margin-top: 1rem;
-            font-size: 0.875rem;
-            color: #666;
-            text-align: center;
-            }}
-        </style>
-        </head>
-        <body>
-        <div class="container">
-            <h2>Reset Your Password</h2>
-            <form action="/reset-password" method="post">
-            <input type="hidden" name="token" value="{token}" />
-            <div class="form-group">
-                <input
-                type="password"
-                name="new_password"
-                placeholder="Enter your new password"
-                required
-                />
-            </div>
-            <button type="submit">Reset Password</button>
-            </form>
-            <p class="note">This link is valid for {settings.email_expire_minutes} minutes from the time it was requested.</p>
-        </div>
-        </body>
-        </html>
-        """
+        return templates.TemplateResponse(
+            "reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "expiration_minutes": settings.jwt_token_expire_minutes,
+            },
+        )
 
-    def reset_password(
-        self, token: Annotated[str, Form(...)], new_password: Annotated[str, Form(...)]
-    ):
+    def reset_password(self, reset: Annotated[ResetPassword, Depends()]):
         try:
             data = jwt.decode(
-                token, settings.secret_key, algorithms=[settings.algorithm]
+                reset.token, settings.secret_key, algorithms=[settings.algorithm]
             )
-            uuid = data.get("uuid")
-
-            if not uuid:
+            if data.get("type") != "jwt":
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token type: jwt token required",
                 )
 
-            UserIn.validate_password(new_password)
+            uuid = data.get("uuid")
+            if not uuid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token: uuid is None"
+                )
+
+            UserIn.validate_password(reset.new_password)
+            if reset.new_password != reset.confirm_password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Confirm password must be same as New password!",
+                )
 
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if not user:
@@ -225,14 +161,17 @@ class UserService:
                     status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
                 )
 
-            user.hashed_password = pwd_context.hash(new_password)
+            user.hashed_password = pwd_context.hash(reset.new_password)
             self.session.add(user)
             self.session.commit()
 
             return {"message": "Password has been reset successfully"}
 
         except InvalidTokenError:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired token",
+            )
 
     def refresh_token(self, refresh_token: str):
         try:
@@ -260,7 +199,7 @@ class UserService:
             if uuid is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid refresh token",
+                    detail="Invalid refresh token: uuid is None",
                 )
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if user is None:
@@ -276,10 +215,6 @@ class UserService:
         except InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-            )
-        except Exception as error:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
             )
 
     def logout(
@@ -297,7 +232,7 @@ class UserService:
             if data_refresh.get("type") != "refresh":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Not a valid refresh token!",
+                    detail="Invalid token type: refresh token required",
                 )
 
             data_access = jwt.decode(
@@ -306,7 +241,7 @@ class UserService:
             if data_access.get("type") != "access":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Not a valid access token!",
+                    detail="Invalid token type: access token required",
                 )
         except InvalidTokenError:
             raise HTTPException(

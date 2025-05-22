@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from typing import Annotated
 from ..models.user_model import User
-from ..schemas.user_admin_schema import UserIn, UserOut, Role
+from ..schemas.user_admin_schema import UserIn, UserOut, Role, Filter
 from ..core.dependencies import SessionDep, admin_access
 from ..services.admin_service import AdminService
 
@@ -13,13 +13,6 @@ def get_admin_service(
 
 
 router = APIRouter()
-
-
-@router.post("/register-first-admin", response_model=UserOut)
-async def register_first_admin(
-    user: UserIn, admin_service: Annotated[AdminService, Depends(get_admin_service)]
-):
-    return admin_service.register_first_admin(user)
 
 
 @router.post("/registers", response_model=UserOut, summary="Register a new user/admin")
@@ -36,8 +29,6 @@ async def register_user(
 async def get_all_users(
     admin_service: Annotated[AdminService, Depends(get_admin_service)],
     current_user: Annotated[User, Depends(admin_access)],
-    limit: int = Query(default=10, ge=1),
-    skip: int = Query(default=0, ge=0),
-    role: str = Query(enum=["user", "admin", "all"], description="Filter by user role"),
+    filter: Annotated[Filter,Depends()]
 ):
-    return admin_service.get_all_users(current_user, limit, skip, role)
+    return admin_service.get_all_users(current_user, filter)
