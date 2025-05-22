@@ -1,37 +1,55 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from app.main import app
-from app.database import get_session, DATABASE_URL
+from app.database import get_session
+from app.core.config import settings
 from app.core.dependencies import pwd_context
 from app.models.user_model import User
 
-engine = create_engine(DATABASE_URL, echo=True)
+
+
+# Test database engine
+test_engine = create_engine(settings.database_url)
 
 
 def get_override_session():
-    with Session(engine) as session:
+    with Session(test_engine) as session:
         yield session
 
 
-@pytest.fixture(autouse=True, scope="function")
-def test_db():
-    print("****Creating tables****")
-    SQLModel.metadata.create_all(bind=engine)
-    yield
-    SQLModel.metadata.drop_all(bind=engine)
-    print("****Droping tables****")
-
-
 app.dependency_overrides[get_session] = get_override_session
+
+
+# Create/drop tables once
+@pytest.fixture(autouse=True)
+def create_test_db():
+    print("***CREATING TABLES***")
+    SQLModel.metadata.create_all(test_engine)
+    yield
+    print("***NOT DELETE TABLES***")
+    SQLModel.metadata.drop_all(test_engine)
+
 
 client = TestClient(app)
 
 
 @pytest.fixture
 def session():
-    with Session(engine) as session:
+    with Session(test_engine) as session:
         yield session
+
+
+@pytest.fixture
+def user_data_factory(client):
+
+    def _get_data(user_header):
+        response = client.get("/me/", headers=user_header)
+        assert response.status_code == status.HTTP_200_OK
+        return response.json()
+
+    return _get_data
 
 
 @pytest.fixture()
@@ -133,3 +151,23 @@ def logout_admin(login_admin):
     token = login_admin.json()["access_token"]
     response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
     return response
+
+
+@pytest.fixture
+def get_access_token_for_admin(login_admin):
+    return login_admin.json()["access_token"]
+
+
+@pytest.fixture
+def get_access_token_for_user(login_user):
+    return login_user.json()["access_token"]
+
+
+@pytest.fixture
+def get_header_for_admin(get_access_token_for_admin):
+    return {"Authorization": f"Bearer {get_access_token_for_admin}"}
+
+
+@pytest.fixture
+def get_header_for_user(get_access_token_for_user):
+    return {"Authorization": f"Bearer {get_access_token_for_user}"}
