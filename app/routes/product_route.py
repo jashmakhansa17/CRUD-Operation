@@ -50,7 +50,7 @@ async def get_products(
     "/all",
     summary="Get all products for admin",
     description="Retrieve a list of all products from the database.",
-    response_model=list[ReadProduct],  
+    response_model=list[ReadProduct],
 )
 async def get_all_products(
     product_service: Annotated[ProductService, Depends(admin_access)],

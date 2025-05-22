@@ -21,7 +21,7 @@ from ..core.dependencies import SessionDep, pwd_context, get_current_user, oauth
 from ..core.auth import create_access_token, create_refresh_token, clean_old_tokens
 from ..utils.send_email import send_reset_email
 from ..core.config import settings
-# from ..core.exceptions import logger
+
 
 class UserService:
     def __init__(self, session: SessionDep):
@@ -83,6 +83,7 @@ class UserService:
         self,
         current_password: str,
         new_password: str,
+        confirm_password: str,
         current_user: Annotated[User, Depends(get_current_user)],
     ):
         if not pwd_context.verify(current_password, current_user.hashed_password):
@@ -91,6 +92,11 @@ class UserService:
                 detail="Incorrect current password!",
             )
         UserIn.validate_password(new_password)
+        if new_password != confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Confirm password must be same as New password!",
+            )
         current_user.hashed_password = pwd_context.hash(new_password)
         self.session.add(current_user)
         self.session.commit()
@@ -195,6 +201,14 @@ class UserService:
                 required
                 />
             </div>
+            <div class="form-group">
+                <input
+                type="password"
+                name="confirm_password"
+                placeholder="Confirm your new password"
+                required
+                />
+            </div>
             <button type="submit">Reset Password</button>
             </form>
             <p class="note">This link is valid for {settings.email_expire_minutes} minutes from the time it was requested.</p>
@@ -204,7 +218,7 @@ class UserService:
         """
 
     def reset_password(
-        self, token: Annotated[str, Form(...)], new_password: Annotated[str, Form(...)]
+        self, token: Annotated[str, Form(...)], new_password: Annotated[str, Form(...)], confirm_password: Annotated[str, Form(...)]
     ):
         try:
             data = jwt.decode(
@@ -218,7 +232,12 @@ class UserService:
                 )
 
             UserIn.validate_password(new_password)
-
+            if new_password != confirm_password:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Confirm password must be same as New password!",
+                )
+                
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if not user:
                 raise HTTPException(
@@ -232,7 +251,10 @@ class UserService:
             return {"message": "Password has been reset successfully"}
 
         except InvalidTokenError:
-            raise HTTPException(status_code=400, detail="Invalid or expired token")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired token",
+            )
 
     def refresh_token(self, refresh_token: str):
         try:
@@ -276,10 +298,6 @@ class UserService:
         except InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-            )
-        except Exception as error:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
             )
 
     def logout(

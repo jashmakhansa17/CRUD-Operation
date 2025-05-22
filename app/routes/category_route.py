@@ -48,14 +48,13 @@ async def create_category_for_current_admin(
     "/user",
     summary="Create a category for user",
     description="Creates a new category for user and stores it in the database. Returns the created category.",
-    
 )
 async def create_category_for_user(
-    user_id: UUID, 
+    user_id: UUID,
     category: CreateCategory,
     category_service: Annotated[CategoryService, Depends(get_category_service_admin)],
 ):
-    return category_service.create_category_for_user(user_id,category)
+    return category_service.create_category_for_user(user_id, category)
 
 
 # Get categories for current person

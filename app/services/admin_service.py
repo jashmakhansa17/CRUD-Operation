@@ -5,6 +5,7 @@ from ..models.user_model import User
 from ..schemas.user_admin_schema import UserIn, Role
 from ..core.dependencies import SessionDep, pwd_context, admin_access
 
+
 class AdminService:
     def __init__(self, session: SessionDep):
         self.session = session
@@ -13,6 +14,7 @@ class AdminService:
         self,
         user: UserIn,
         role: Role,
+        current_user: Annotated[User, Depends(admin_access)],
     ):
         existing_user = self.session.exec(
             select(User).where(User.email == user.email)
