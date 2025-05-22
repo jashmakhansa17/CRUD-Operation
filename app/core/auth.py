@@ -16,8 +16,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         )
     jti = str(uuid.uuid4())
     to_encode.update({"exp": expire, "type": "access", "jti": jti})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
 
 def create_refresh_token(data: dict):
     expire = datetime.now(timezone.utc) + timedelta(
@@ -25,8 +25,16 @@ def create_refresh_token(data: dict):
     )
     jti = str(uuid.uuid4())
     data.update({"exp": expire, "type": "refresh", "jti": jti})
-    return jwt.encode(data, settings.secret_key, algorithm=settings.algorithm)
+    encoded_jwt = jwt.encode(data, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
 
+def create_jwt_token(data: dict):
+    expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.jwt_token_expire_minutes
+    )
+    data.update({"exp": expire, "type": "jwt"})
+    encoded_jwt = jwt.encode(data, settings.secret_key, algorithm=settings.algorithm)
+    return encoded_jwt
 
 def clean_old_tokens(session: Session):
     now = datetime.now(timezone.utc)

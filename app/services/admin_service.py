@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status, Query
 from typing import Annotated
 from sqlmodel import select
 from ..models.user_model import User
-from ..schemas.user_admin_schema import UserIn, Role
+from ..schemas.user_admin_schema import UserIn, Role, Filter
 from ..core.dependencies import SessionDep, pwd_context, admin_access
 
 
@@ -41,16 +41,12 @@ class AdminService:
     def get_all_users(
         self,
         current_user: Annotated[User, Depends(admin_access)],
-        limit: int = Query(default=10, ge=1),
-        skip: int = Query(default=0, ge=0),
-        role: str = Query(
-            enum=["user", "admin", "all"], description="Filter by user role"
-        ),
+        filter: Annotated[Filter,Depends()]
     ):
-        if role == "all":
-            query = select(User).offset(skip).limit(limit)
+        if filter.role == "all":
+            query = select(User).offset(filter.skip).limit(filter.limit)
         else:
-            query = select(User).where(User.role == role).offset(skip).limit(limit)
+            query = select(User).where(User.role == filter.role).offset(filter.skip).limit(filter.limit)
 
         users = self.session.exec(query).all()
         return users

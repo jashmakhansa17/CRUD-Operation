@@ -52,8 +52,7 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
-    except Exception as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
+   
 
 
 def admin_access(current_user: Annotated[User, Depends(get_current_user)]):

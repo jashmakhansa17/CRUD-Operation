@@ -6,9 +6,10 @@ import uuid
 @pytest.mark.usefixtures("setup_auth")
 class TestCreateCategory:
 
-    def test_create_data_by_user(self, category_fixture1):
+    def test_create_data_by_user(self, category_fixture1, get_access_token_for_admin):
+        token = login_admin.json()['access_token']
         response = self.client.post(
-            "/category/", json=category_fixture1, headers=self.user1_header
+            "/category/", json=category_fixture1, headers=
         )
         data = response.json()
 
