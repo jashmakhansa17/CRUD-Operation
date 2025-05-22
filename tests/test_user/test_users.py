@@ -259,7 +259,7 @@ class TestUsers:
 
     def test_reset_password_success(self,register_user):
         assert register_user.status_code == status.HTTP_200_OK
-        user_id = self.data["id"]
+        user_id = register_user.json()["id"]
         token = create_jwt_token(data={"uuid": str(user_id)})
 
         response = client.post(
@@ -290,7 +290,7 @@ class TestUsers:
 
     def test_reset_password_invalid_jwt_token(self, register_user):
         assert register_user.status_code == status.HTTP_200_OK
-        user_id = self.data["id"]
+        user_id = register_user.json()["id"]
         token = create_access_token(data={"uuid": str(user_id)})
 
         response = client.post(
@@ -340,7 +340,7 @@ class TestUsers:
 
     def test_reset_password_incorrect_password(self, register_user):
         assert register_user.status_code == status.HTTP_200_OK
-        user_id = self.data["id"]
+        user_id = register_user.json()["id"]
         token = create_jwt_token(data={"uuid": str(user_id)})
 
         response = client.post(
@@ -367,7 +367,7 @@ class TestUsers:
     )
     def test_reset_new_password_validation_errors(self, register_user, password, output_detail):
         assert register_user.status_code == status.HTTP_200_OK
-        user_id = self.data["id"]
+        user_id = register_user.json()["id"]
         token = create_jwt_token(data={"uuid": str(user_id)})
 
         response = client.post(

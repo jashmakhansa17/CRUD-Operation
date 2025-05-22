@@ -28,7 +28,7 @@ app.dependency_overrides[get_session] = get_override_session
 client = TestClient(app)
 
 
-@pytest.fixture()
+@pytest.fixture
 def session():
     with Session(engine) as session:
         yield session
@@ -36,7 +36,11 @@ def session():
 
 @pytest.fixture()
 def admin_data():
-    return {"username": "admin12@gmail.com","full_name": "admin name","password": "Admin@123"}
+    return {
+        "username": "admin12@gmail.com",
+        "full_name": "admin name",
+        "password": "Admin@123",
+    }
 
 
 @pytest.fixture()
@@ -61,7 +65,11 @@ def login_admin(admin_data, session):
 
 @pytest.fixture()
 def user_data():
-    return {"username": "user12@gmail.com","full_name": "user name", "password": "User@123"}
+    return {
+        "username": "user12@gmail.com",
+        "full_name": "user name",
+        "password": "User@123",
+    }
 
 
 @pytest.fixture()
@@ -83,41 +91,45 @@ def login_user(user_data, session):
     )
     return response
 
+
 @pytest.fixture()
 def register_user_and_admin_by_admin(login_admin):
-        token = login_admin.json()["access_token"]
+    token = login_admin.json()["access_token"]
 
-        response = client.post(
-            "/registers?role=user",
-            json={
-                "email": "user123@gmail.com",
-                "full_name": "user name",
-                "password": "User@123",
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        return response
-    
+    response = client.post(
+        "/registers?role=user",
+        json={
+            "email": "user123@gmail.com",
+            "full_name": "user name",
+            "password": "User@123",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return response
+
+
 @pytest.fixture()
 def register_user():
-        response = client.post(
-            "/register",
-            json={
-                "email": "user123@gmail.com",
-                "full_name": "user name",
-                "password": "User@123",
-            },
-        )
-        return response
-    
+    response = client.post(
+        "/register",
+        json={
+            "email": "user123@gmail.com",
+            "full_name": "user name",
+            "password": "User@123",
+        },
+    )
+    return response
+
+
 @pytest.fixture()
 def logout_user(login_user):
-        token = login_user.json()["access_token"]
-        response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
-        return response
-    
+    token = login_user.json()["access_token"]
+    response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
+    return response
+
+
 @pytest.fixture()
 def logout_admin(login_admin):
-        token = login_admin.json()["access_token"]
-        response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
-        return response
+    token = login_admin.json()["access_token"]
+    response = client.post("/logout", headers={"Authorization": f"Bearer {token}"})
+    return response
