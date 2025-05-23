@@ -1,10 +1,13 @@
 from fastapi import status
-import pytest
 from ..conftest import client
+from app.core.constants import (
+    invalid_access_token,
+    not_authenticated,
+    token_is_blacklisted,
+)
 
 
 class TestGetAllUserAdmin:
-
     def test_get_all_users(self, login_admin):
         token = login_admin.json()["access_token"]
 
@@ -26,7 +29,7 @@ class TestGetAllUserAdmin:
         response = client.get("/get-all", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Invalid token type: access token required"
+        assert data["detail"] == invalid_access_token
 
     def test_get_all_users_filter_by_role_user(self, login_admin):
         token = login_admin.json()["access_token"]
@@ -39,8 +42,10 @@ class TestGetAllUserAdmin:
         for user in data:
             assert user["role"] == "user"
 
-    def test_get_all_users_filter_by_role_admin(self, login_admin, register_user_and_admin_by_admin):
-        response=register_user_and_admin_by_admin
+    def test_get_all_users_filter_by_role_admin(
+        self, login_admin, register_user_and_admin_by_admin
+    ):
+        response = register_user_and_admin_by_admin
         assert response.status_code == status.HTTP_200_OK
         token = login_admin.json()["access_token"]
 
@@ -67,15 +72,15 @@ class TestGetAllUserAdmin:
         response = client.get("/get-all")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Not authenticated"
-    
+        assert data["detail"] == not_authenticated
+
     def test_get_all_users_blacklisted(self, login_admin):
         token = login_admin.json()["access_token"]
         client.post("/logout", headers={"Authorization": f"Bearer {token}"})
         response = client.get("/get-all", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Token is blacklisted"
+        assert data["detail"] == token_is_blacklisted
 
     def test_user_cannot_access_all_users_and_admin(self, login_user):
         token = login_user.json()["access_token"]

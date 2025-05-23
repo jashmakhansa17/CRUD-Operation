@@ -1,9 +1,19 @@
 from fastapi import status
 import pytest
 from ..conftest import client
+from app.core.constants import (
+    invalid_access_token,
+    not_authenticated,
+    token_is_blacklisted,
+    email_already_exist,
+    password_have_atleast_8_characters,
+    password_have_atleast_one_digit,
+    password_have_atleast_one_lowercase_letter,
+    password_have_atleast_one_special_character,
+    password_have_atleast_one_uppercase_letter
+)
 
-
-class TestRegister:
+class TestAdminRegisters:
     def test_register_add_user_success(self, register_user_and_admin_by_admin):
         response=register_user_and_admin_by_admin
         assert response.status_code == status.HTTP_200_OK
@@ -49,7 +59,7 @@ class TestRegister:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json()["detail"] == "Email already registered"
+        assert response.json()["detail"] == email_already_exist
 
     def test_register_user_invalid_token(self, login_admin):
         token = login_admin.json()["refresh_token"]
@@ -65,16 +75,16 @@ class TestRegister:
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Invalid token type: access token required"
+        assert data["detail"] == invalid_access_token
 
     @pytest.mark.parametrize(
         "password, output_detail",
         [
-            ("User@1", "Password must be at least 8 characters long"),
-            ("user@123", "Password must include at least one uppercase letter"),
-            ("USER@123", "Password must include at least one lowercase letter"),
-            ("User@user", "Password must include at least one digit"),
-            ("User123user", "Password must include at least one special character"),
+            ("User@1", password_have_atleast_8_characters),
+            ("user@123", password_have_atleast_one_uppercase_letter),
+            ("USER@123", password_have_atleast_one_lowercase_letter),
+            ("User@user", password_have_atleast_one_digit),
+            ("User123user", password_have_atleast_one_special_character),
         ]
     )
     def test_register_password_validation_errors(self, login_admin, password, output_detail):
@@ -105,7 +115,7 @@ class TestRegister:
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Not authenticated"
+        assert data["detail"] == not_authenticated
 
     def test_register_blacklisted(self, login_admin):
         token = login_admin.json()["access_token"]
@@ -121,7 +131,7 @@ class TestRegister:
         )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert data["detail"] == "Token is blacklisted"
+        assert data["detail"] == token_is_blacklisted
         
     def test_user_cannot_register_new_user(self, login_user):
         token = login_user.json()["access_token"]

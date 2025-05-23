@@ -9,6 +9,7 @@ from ..database import get_session
 from ..models.user_model import User, Role
 from ..models.blacklistedtoken_model import BlacklistedToken
 from .config import settings
+from .constants import invalid_access_token, token_is_blacklisted, invalid_token, user_not_found, admin_can_access
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -24,7 +25,7 @@ def get_current_user(
         if data.get("type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type: access token required",
+                detail=invalid_access_token,
             )
 
         blacklisted = session.exec(
@@ -34,23 +35,23 @@ def get_current_user(
         ).first()
         if blacklisted:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is blacklisted"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=token_is_blacklisted
             )
 
         uuid = data.get("uuid")
         if uuid is None:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_token
             )
         user = session.exec(select(User).where(User.id == uuid)).first()
         if user is None:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=user_not_found
             )
         return user
     except InvalidTokenError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_token
         )
    
 
@@ -58,6 +59,6 @@ def get_current_user(
 def admin_access(current_user: Annotated[User, Depends(get_current_user)]):
     if current_user.role != Role.admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only Admin can access!"
+            status_code=status.HTTP_403_FORBIDDEN, detail=admin_can_access
         )
     return current_user

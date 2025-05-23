@@ -4,7 +4,7 @@ from sqlmodel import select
 from ..models.user_model import User
 from ..schemas.user_admin_schema import UserIn, Role, Filter
 from ..core.dependencies import SessionDep, pwd_context, admin_access
-
+from ..core.constants import email_already_exist
 
 class AdminService:
     def __init__(self, session: SessionDep):
@@ -22,7 +22,7 @@ class AdminService:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
+                detail=email_already_exist,
             )
 
         hashed_password = pwd_context.hash(user.password)

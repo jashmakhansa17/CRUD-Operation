@@ -25,6 +25,23 @@ from ..core.auth import (
 )
 from ..utils.send_email import send_reset_email
 from ..core.config import settings
+from ..core.constants import (
+    email_already_exist,
+    invalid_email_or_user,
+    invalid_password,
+    invalid_current_password,
+    invalid_confirm_password,
+    password_updated_successful,
+    user_not_found,
+    password_reset_email_sent,
+    invalid_jwt_token,
+    invalid_token,
+    invalid_refresh_token,
+    token_is_blacklisted,
+    invalid_access_token,
+    logout_successful,
+)
+
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -40,7 +57,7 @@ class UserService:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
+                detail=email_already_exist,
             )
 
         hashed_password = pwd_context.hash(user.password)
@@ -66,11 +83,11 @@ class UserService:
         ).first()
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/user!"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_email_or_user
             )
         if not pwd_context.verify(form_data.password, user.hashed_password):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password!"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_password
             )
         access_token = create_access_token(data={"uuid": str(user.id)})
         refresh_token = create_refresh_token(data={"uuid": str(user.id)})
@@ -95,30 +112,30 @@ class UserService:
         ):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect current password!",
+                detail=invalid_current_password,
             )
         UserIn.validate_password(password.new_password)
         if password.new_password != password.confirm_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Confirm password must be same as New password!",
+                detail=invalid_confirm_password,
             )
         current_user.hashed_password = pwd_context.hash(password.new_password)
         self.session.add(current_user)
         self.session.commit()
-        return {"message": "Password updated successfully"}
+        return {"message": password_updated_successful}
 
     def forgot_password(self, email: EmailStr, background_tasks: BackgroundTasks):
         user = self.session.exec(select(User).where(User.email == email)).first()
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail=user_not_found)
 
         token_data = {"uuid": str(user.id)}
         reset_token = create_jwt_token(data=token_data)
 
         background_tasks.add_task(send_reset_email, email, reset_token)
 
-        return {"message": "Password reset email sent."}
+        return {"message": password_reset_email_sent}
 
     @staticmethod
     def show_reset_form(request: Request, token: str):
@@ -139,38 +156,38 @@ class UserService:
             if data.get("type") != "jwt":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token type: jwt token required",
+                    detail=invalid_jwt_token,
                 )
 
             uuid = data.get("uuid")
             if not uuid:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token: uuid is None"
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=invalid_token
                 )
 
             UserIn.validate_password(reset.new_password)
             if reset.new_password != reset.confirm_password:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Confirm password must be same as New password!",
+                    detail=invalid_confirm_password,
                 )
 
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if not user:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+                    status_code=status.HTTP_404_NOT_FOUND, detail=user_not_found
                 )
 
             user.hashed_password = pwd_context.hash(reset.new_password)
             self.session.add(user)
             self.session.commit()
 
-            return {"message": "Password has been reset successfully"}
+            return {"message": password_updated_successful}
 
         except InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired token",
+                detail=invalid_token,
             )
 
     def refresh_token(self, refresh_token: str):
@@ -181,7 +198,7 @@ class UserService:
             if data.get("type") != "refresh":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token type: refresh token required",
+                    detail=invalid_refresh_token,
                 )
 
             blacklisted = self.session.exec(
@@ -192,19 +209,19 @@ class UserService:
             if blacklisted:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Refresh token has been blacklisted",
+                    detail=token_is_blacklisted,
                 )
 
             uuid: str = data.get("uuid")
             if uuid is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid refresh token: uuid is None",
+                    detail=invalid_token,
                 )
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if user is None:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail=user_not_found
                 )
             access_token = create_access_token(data={"uuid": str(user.id)})
             return {
@@ -214,7 +231,7 @@ class UserService:
             }
         except InvalidTokenError:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_token
             )
 
     def logout(
@@ -232,7 +249,7 @@ class UserService:
             if data_refresh.get("type") != "refresh":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid token type: refresh token required",
+                    detail=invalid_refresh_token,
                 )
 
             data_access = jwt.decode(
@@ -241,11 +258,11 @@ class UserService:
             if data_access.get("type") != "access":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid token type: access token required",
+                    detail=invalid_access_token,
                 )
         except InvalidTokenError:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=invalid_token
             )
 
         blacklisted = BlacklistedToken(
@@ -255,4 +272,4 @@ class UserService:
         self.session.commit()
         response.delete_cookie("refresh_token")
         clean_old_tokens(self.session)
-        return {"message": f"{current_user.email} is logged out successfully"}
+        return {"message": logout_successful}
