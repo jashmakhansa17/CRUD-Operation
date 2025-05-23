@@ -6,7 +6,7 @@ from .constants import (
     item_invalid_data_exception,
     internal_server_exception,
 )
-from .logers import logger
+from .loggers import logger
 
 
 class UserNotFoundException(HTTPException):

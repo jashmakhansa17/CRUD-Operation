@@ -8,8 +8,6 @@ from app.core.config import settings
 from app.core.dependencies import pwd_context
 from app.models.user_model import User
 
-
-
 # Test database engine
 test_engine = create_engine(settings.database_url)
 
@@ -25,10 +23,10 @@ app.dependency_overrides[get_session] = get_override_session
 # Create/drop tables once
 @pytest.fixture(autouse=True)
 def create_test_db():
-    print("***CREATING TABLES***")
+    print("**CREATING TABLES**")
     SQLModel.metadata.create_all(test_engine)
     yield
-    print("***NOT DELETE TABLES***")
+    print("**DELETING TABLES**")
     SQLModel.metadata.drop_all(test_engine)
 
 
@@ -42,10 +40,9 @@ def session():
 
 
 @pytest.fixture
-def user_data_factory(client):
-
-    def _get_data(user_header):
-        response = client.get("/me/", headers=user_header)
+def user_data_factory():
+    def _get_data(token):
+        response = client.get("/me/", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == status.HTTP_200_OK
         return response.json()
 
@@ -55,7 +52,7 @@ def user_data_factory(client):
 @pytest.fixture()
 def admin_data():
     return {
-        "username": "admin12@gmail.com",
+        "username": "admin1@gmail.com",
         "full_name": "admin name",
         "password": "Admin@123",
     }
@@ -73,7 +70,6 @@ def login_admin(admin_data, session):
     session.add(user)
     session.commit()
     session.refresh(user)
-
     response = client.post(
         "/login",
         data={"username": admin_data["username"], "password": admin_data["password"]},
@@ -84,7 +80,7 @@ def login_admin(admin_data, session):
 @pytest.fixture()
 def user_data():
     return {
-        "username": "user12@gmail.com",
+        "username": "user1@gmail.com",
         "full_name": "user name",
         "password": "User@123",
     }
@@ -102,7 +98,6 @@ def login_user(user_data, session):
     session.add(user)
     session.commit()
     session.refresh(user)
-
     response = client.post(
         "/login",
         data={"username": user_data["username"], "password": user_data["password"]},
@@ -111,15 +106,14 @@ def login_user(user_data, session):
 
 
 @pytest.fixture()
-def register_user_and_admin_by_admin(login_admin):
+def register_admin_by_admin(login_admin):
     token = login_admin.json()["access_token"]
-
     response = client.post(
-        "/registers?role=user",
+        "/registers?role=admin",
         json={
-            "email": "user123@gmail.com",
-            "full_name": "user name",
-            "password": "User@123",
+            "email": "admin2@gmail.com",
+            "full_name": "admin name",
+            "password": "Admin@123",
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -127,11 +121,35 @@ def register_user_and_admin_by_admin(login_admin):
 
 
 @pytest.fixture()
+def register_user_by_admin(login_admin):
+    token = login_admin.json()["access_token"]
+    response = client.post(
+        "/registers?role=user",
+        json={
+            "email": "user2@gmail.com",
+            "full_name": "user name",
+            "password": "User@123",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return response
+
+@pytest.fixture
+def login_person():
+    def _login(username, password):
+        response = client.post(
+            "/login",
+            data={"username": username, "password": password},
+        )
+        return response.json()['access_token']
+    return _login
+
+@pytest.fixture()
 def register_user():
     response = client.post(
         "/register",
         json={
-            "email": "user123@gmail.com",
+            "email": "user3@gmail.com",
             "full_name": "user name",
             "password": "User@123",
         },
@@ -164,10 +182,33 @@ def get_access_token_for_user(login_user):
 
 
 @pytest.fixture
-def get_header_for_admin(get_access_token_for_admin):
-    return {"Authorization": f"Bearer {get_access_token_for_admin}"}
+def create_category_for_admin():
+    def _create_category(token, category):
+        response = client.post(
+            "/category/", json=category, headers={"Authorization": f"Bearer {token}"}
+        )
+        return response
+
+    return _create_category
 
 
 @pytest.fixture
-def get_header_for_user(get_access_token_for_user):
-    return {"Authorization": f"Bearer {get_access_token_for_user}"}
+def create_category_for_user():
+    def _create_category(token, user_id, category):
+        response = client.post(
+            f"/category/user?user_id={user_id}",
+            json=category,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        return response
+
+    return _create_category
+
+
+@pytest.fixture
+def dummy_category_data():
+    data = {
+        "category_one": {"name": "fake category one"},
+        "category_two": {"name": "fake category two"},
+    }
+    return data

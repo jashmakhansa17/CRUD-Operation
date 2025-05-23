@@ -1,5 +1,7 @@
 from fastapi import status
 import pytest
+import traceback
+from app.core.loggers import logger
 from ..conftest import client
 from app.core.constants import (
     email_already_exist,
@@ -12,32 +14,43 @@ from app.core.constants import (
 )
 
 class TestUserRegister:
+    
     def test_register_user_success(self,register_user):
-        response =register_user
-        assert response.status_code == status.HTTP_200_OK
+        try:
+            response =register_user
+            assert response.status_code == status.HTTP_200_OK
 
-        data = response.json()
-        assert self.data["email"] == "user123@gmail.com"
-        assert self.data["full_name"] == "user name"
-        assert self.data["role"] == "user"
-        assert "password" not in data
-        assert "id" in data
+            data = response.json()
+            assert data["email"] == "user3@gmail.com"
+            assert data["full_name"] == "user name"
+            assert data["role"] == "user"
+            assert "password" not in data
+            assert "id" in data
 
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
     def test_register_existing_email(self,register_user):
-        response=register_user
-        assert response.status_code == status.HTTP_200_OK
-        response = client.post(
-            "/register",
-            json={
-                "email": "user123@gmail.com",
-                "full_name": "user2 name",
-                "password": "User123@123",
-            },
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        data = response.json()
-        assert data["detail"] == email_already_exist
+        try:
+            response=register_user
+            assert response.status_code == status.HTTP_200_OK
+            response = client.post(
+                "/register",
+                json={
+                    "email": "user3@gmail.com",
+                    "full_name": "user2 name",
+                    "password": "User123@123",
+                },
+            )
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            data = response.json()
+            assert data["detail"] == email_already_exist
 
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
     @pytest.mark.parametrize(
         "password, output_detail",
         [
@@ -49,17 +62,21 @@ class TestUserRegister:
         ]
     )
     def test_register_password_validation_errors(self, password, output_detail):
+        try:
+            response = client.post(
+                "/register",
+                json={
+                    "email": "user2@gmail.com",
+                    "full_name": "user name",
+                    "password": password,
+                },
+            )
 
-        response = client.post(
-            "/register",
-            json={
-                "email": "user123@gmail.com",
-                "full_name": "user name",
-                "password": password,
-            },
-        )
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            data = response.json()
+            assert data["detail"] == output_detail
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-        data = response.json()
-        assert data["detail"] == output_detail
-
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+    

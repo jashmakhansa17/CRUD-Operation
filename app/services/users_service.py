@@ -174,6 +174,7 @@ class UserService:
 
             user = self.session.exec(select(User).where(User.id == uuid)).first()
             if not user:
+                
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND, detail=user_not_found
                 )

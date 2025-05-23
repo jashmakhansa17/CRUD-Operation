@@ -3,107 +3,119 @@ import traceback
 from app.core.loggers import logger
 from ..conftest import client
 from app.core.constants import (
-    token_is_blacklisted,
-    invalid_refresh_token,
-    invalid_token
-    
+    invalid_access_token,
+    not_authenticated,
+    token_is_blacklisted    
 )
 
-class TestRefreshTokenByUser:
 
-    def test_refresh_token_success(self, login_user):
-        try:
-            token = login_user.json()["refresh_token"]
-            response = client.post(f"/refresh-token?refresh_token={token}")
-            assert response.status_code == status.HTTP_200_OK
-            data = response.json()
-            assert "access_token" in data
-            assert "refresh_token" in data
-
-        except Exception:
-            logger.error(traceback.format_exc())
-            raise
-        
-    def test_refresh_token_invalid_refresh_token(self, login_user):
+class TestGetCurrentUser:
+  
+    def test_get_user_success(self, login_user):
         try:
             token = login_user.json()["access_token"]
-            response = client.post(f"/refresh-token?refresh_token={token}")
-            assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            data = response.json()
-            assert data["detail"] == invalid_refresh_token
 
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+            assert data["email"] == "user1@gmail.com"
+            assert data["full_name"] == "user name"
+            assert data["role"] == "user"
+        
         except Exception:
             logger.error(traceback.format_exc())
             raise
-        
-    def test_refresh_token_(self):
-        try:
-            response = client.post("/refresh-token?refresh_token=123")
-            assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            data = response.json()
-            assert data["detail"] ==invalid_token
 
-        except Exception:
-            logger.error(traceback.format_exc())
-            raise
-        
-    def test_refresh_token_blacklisted(self, login_user, logout_user):
+    def test_get_user_invalid_token(self, login_user):
         try:
             token = login_user.json()["refresh_token"]
+
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            data = response.json()
+            assert data["detail"] == invalid_access_token
+
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
+    def test_get_user_unauthorized(self):
+        try:
+            response = client.get("/me")
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            data = response.json()
+            assert data["detail"] == not_authenticated
+        
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
+    def test_get_user_blacklisted(self, login_user, logout_user):
+        try:
+            token = login_user.json()["access_token"]
             assert logout_user.status_code == status.HTTP_200_OK
-            response = client.post(f"/refresh-token?refresh_token={token}")
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
             data = response.json()
             assert data["detail"] == token_is_blacklisted
-
+        
         except Exception:
             logger.error(traceback.format_exc())
             raise
         
 
-class TestRefreshTokenByAdmin:
-
-    def test_refresh_token_success(self, login_admin):
-        try:
-            token = login_admin.json()["refresh_token"]
-            response = client.post(f"/refresh-token?refresh_token={token}")
-            assert response.status_code == status.HTTP_200_OK
-            data = response.json()
-            assert "access_token" in data
-            assert "refresh_token" in data
-
-        except Exception:
-            logger.error(traceback.format_exc())
-            raise
-        
-    def test_refresh_token_invalid_refresh_token(self, login_admin):
+class TestGetCurrentAdmin:
+  
+    def test_get_user_success(self, login_admin):
         try:
             token = login_admin.json()["access_token"]
-            response = client.post(f"/refresh-token?refresh_token={token}")
-            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
+            assert response.status_code == status.HTTP_200_OK
             data = response.json()
-            assert data["detail"] == invalid_refresh_token
+            assert data["email"] == "admin1@gmail.com"
+            assert data["full_name"] == "admin name"
+            assert data["role"] == "admin"
 
         except Exception:
             logger.error(traceback.format_exc())
             raise
         
-    def test_refresh_token_(self):
-        try:
-            response = client.post("/refresh-token?refresh_token=123")
-            assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            data = response.json()
-            assert data["detail"] ==invalid_token
-
-        except Exception:
-            logger.error(traceback.format_exc())
-            raise
-        
-    def test_refresh_token_blacklisted(self, login_admin, logout_admin):
+    def test_get_user_invalid_token(self, login_admin):
         try:
             token = login_admin.json()["refresh_token"]
+
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            data = response.json()
+            assert data["detail"] == invalid_access_token
+
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
+    def test_get_user_unauthorized(self):
+        try:
+            response = client.get("/me")
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            data = response.json()
+            assert data["detail"] == not_authenticated
+        
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
+        
+    def test_get_user_blacklisted(self, login_admin, logout_admin):
+        try:
+            token = login_admin.json()["access_token"]
             assert logout_admin.status_code == status.HTTP_200_OK
-            response = client.post(f"/refresh-token?refresh_token={token}")
+            response = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
             data = response.json()
             assert data["detail"] == token_is_blacklisted
